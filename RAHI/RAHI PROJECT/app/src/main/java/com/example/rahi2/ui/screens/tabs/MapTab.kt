@@ -8,13 +8,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+// import androidx.compose.foundation.layout.Row // Will be removed
+// import androidx.compose.foundation.layout.Spacer // Will be removed if not used elsewhere
 import androidx.compose.foundation.layout.fillMaxSize
+// import androidx.compose.foundation.layout.fillMaxWidth // Will be removed if not used by dropdown
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddLocationAlt
+// import androidx.compose.foundation.layout.width // Will be removed
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,40 +35,47 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.android.gms.tasks.CancellationTokenSource
+import java.util.Locale
 
 @Composable
 fun MapTab() {
     val context = LocalContext.current
     var hasLocationPermission by remember { mutableStateOf(false) }
     var currentLocation by remember { mutableStateOf<LatLng?>(null) }
+    var currentMapType by remember { mutableStateOf(MapType.NORMAL) }
+    var showMapTypeSelector by remember { mutableStateOf(false) }
 
-    // Default camera position (e.g., center of a relevant region or a default city)
-    val defaultIndiaLatLng = LatLng(20.5937, 78.9629) // Center of India
+    val defaultIndiaLatLng = LatLng(20.5937, 78.9629)
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(defaultIndiaLatLng, 5f)
     }
 
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
+    val mapProperties by remember(currentMapType) { 
+        mutableStateOf(MapProperties(mapType = currentMapType))
+    }
+
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
             if (isGranted) {
                 hasLocationPermission = true
-                // Attempt to fetch location again if permission is granted now
             } else {
                 hasLocationPermission = false
-                // Optionally, show a message that location can't be displayed without permission
             }
         }
     )
@@ -78,33 +90,38 @@ fun MapTab() {
                         cameraPositionState.position = CameraPosition.fromLatLngZoom(currentLocation!!, 15f)
                     }
                 }
-                .addOnFailureListener {
-                    // Handle failure to get location
+                .addOnFailureListener { exception ->
+                    // Optionally log this exception or inform the user
                 }
         } else {
             locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
 
-    LaunchedEffect(Unit) { // Check and request permission on initial launch
+    LaunchedEffect(Unit) {
         when (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)) {
             PackageManager.PERMISSION_GRANTED -> {
                 hasLocationPermission = true
-                fetchCurrentLocation() // Fetch location if permission already granted
+                fetchCurrentLocation()
             }
             else -> {
                 locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             }
         }
     }
-    
-    // Effect to refetch location if permission state changes to granted
+
     LaunchedEffect(hasLocationPermission) {
         if (hasLocationPermission && currentLocation == null) {
             fetchCurrentLocation()
         }
     }
 
+    val mapTypes = listOf(
+        MapType.NORMAL,
+        MapType.SATELLITE,
+        MapType.TERRAIN,
+        MapType.HYBRID
+    )
 
     Box(
         modifier = Modifier
@@ -114,7 +131,8 @@ fun MapTab() {
         if (hasLocationPermission) {
             GoogleMap(
                 modifier = Modifier.matchParentSize(),
-                cameraPositionState = cameraPositionState
+                cameraPositionState = cameraPositionState,
+                properties = mapProperties
             ) {
                 currentLocation?.let {
                     Marker(
@@ -141,13 +159,48 @@ fun MapTab() {
             }
         }
 
-        FloatingActionButton(
-            onClick = { /* TODO: future: add safe zone functionality */ },
+        // Dropdown Map Type Selector
+        Box(
             modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
+                .align(Alignment.TopEnd)
+                .padding(top = 16.dp, end = 16.dp)
+                .wrapContentSize(Alignment.TopEnd)
         ) {
-            Icon(Icons.Filled.AddLocationAlt, contentDescription = "Add Safe Zone")
+            Button(
+                onClick = { showMapTypeSelector = !showMapTypeSelector },
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Black.copy(alpha = 0.5f),
+                    contentColor = Color.White
+                ),
+                elevation = ButtonDefaults.buttonElevation(0.dp, 0.dp)
+            ) {
+                Text(
+                    currentMapType.name.lowercase(Locale.getDefault()).replaceFirstChar { it.titlecase(Locale.getDefault()) },
+                    fontSize = 14.sp // Slightly larger font for the button text
+                )
+            }
+
+            DropdownMenu(
+                expanded = showMapTypeSelector,
+                onDismissRequest = { showMapTypeSelector = false },
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f))
+            ) {
+                mapTypes.forEach { mapType ->
+                    DropdownMenuItem(
+                        text = { 
+                            Text(
+                                mapType.name.lowercase(Locale.getDefault()).replaceFirstChar { it.titlecase(Locale.getDefault()) },
+                                fontSize = 16.sp // Increased font size for dropdown items
+                            )
+                        },
+                        onClick = {
+                            currentMapType = mapType
+                            showMapTypeSelector = false
+                        }
+                    )
+                }
+            }
         }
     }
 }
