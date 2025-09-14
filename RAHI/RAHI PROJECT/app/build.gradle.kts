@@ -36,10 +36,20 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
 dependencies {
+    implementation(platform("androidx.compose:compose-bom:2024.09.00")) // Or your chosen BoM
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.navigation:navigation-compose:2.8.3") // Or latest
+    implementation("com.google.maps.android:maps-compose:6.1.0") // Or latest maps-compose
+    implementation("com.google.android.gms:play-services-maps:19.2.0") // Or latest play-services-maps
+
+    // If you need user's current location:
+    implementation("com.google.android.gms:play-services-location:21.3.0") // Or latest
     implementation("androidx.compose.ui:ui:1.9.0") // Ensure you have base compose UI
     implementation("com.google.maps.android:maps-compose:6.10.0") // Google Maps Compose Library
     implementation("com.google.android.gms:play-services-maps:19.2.0") // Google Play Services for Maps
@@ -55,6 +65,10 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.compose.animation)
     implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.material)
+    implementation(libs.androidx.activity)
+    implementation(libs.androidx.constraintlayout)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
