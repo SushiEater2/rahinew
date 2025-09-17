@@ -12,6 +12,30 @@ import Admin from './components/Admin';
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState('home');
+  const [isDarkTheme, setIsDarkTheme] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Theme management
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      setIsDarkTheme(true);
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = !isDarkTheme;
+    setIsDarkTheme(newTheme);
+    
+    if (newTheme) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      localStorage.setItem('theme', 'light');
+    }
+  };
 
   // Fullscreen functionality with scroll preservation
   useEffect(() => {
@@ -88,6 +112,22 @@ const App = () => {
   }, []);
 
   const handlePageChange = (pageId) => {
+    // Check if trying to access dashboard without authentication
+    if (pageId === 'dashboard' && !isAuthenticated) {
+      const userChoice = window.confirm(
+        'You need to login or register to access the Tourist Dashboard.\n\nClick OK to go to Login page, or Cancel to go to Registration page.'
+      );
+      
+      if (userChoice) {
+        // Redirect to login page
+        window.location.href = '/login.html';
+      } else {
+        // Redirect to registration page
+        setCurrentPage('register');
+      }
+      return;
+    }
+    
     setCurrentPage(pageId);
   };
 
@@ -119,6 +159,13 @@ const App = () => {
       <Footer />
       <PanicButton />
       <Chatbot />
+      
+      {/* Theme Toggle Button */}
+      <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
+        <span className="theme-toggle-icon">
+          {isDarkTheme ? '☀️' : '🌙'}
+        </span>
+      </button>
     </div>
   );
 };

@@ -27,9 +27,6 @@ const Header = ({ onPageChange, currentPage }) => {
           <a href="#dashboard" className={`nav-link ${currentPage === 'dashboard' ? 'active' : ''}`} onClick={() => handleLinkClick('dashboard')}>Tourist Dashboard</a>
           <a href="#alerts" className={`nav-link ${currentPage === 'alerts' ? 'active' : ''}`} onClick={() => handleLinkClick('alerts')}>Alerts</a>
           <a href="#help" className={`nav-link ${currentPage === 'help' ? 'active' : ''}`} onClick={() => handleLinkClick('help')}>Help & Support</a>
-          <div className="nav-links">
-            <Link to="/login.html" className="nav-button">Login</Link>
-          </div>
           <div className="language-selector">
             <svg className="globe-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="10"/>
@@ -40,10 +37,13 @@ const Header = ({ onPageChange, currentPage }) => {
               <option value="en">English</option>
               <option value="hi">हिंदी</option>
               <option value="bn">বাংলা</option>
-              <option value="ta">தமிழ্</option>
+              <option value="ta">தமিழ্</option>
             </select>
           </div>
-          <a href="#register" className="btn btn-primary btn-sm" onClick={() => handleLinkClick('register')}>Register</a>
+          <div className="header-buttons">
+            <Link to="/login.html" className="btn btn-outline btn-sm">Login</Link>
+            <a href="#register" className="btn btn-primary btn-sm" onClick={() => handleLinkClick('register')}>Register</a>
+          </div>
         </nav>
         <button className="mobile-menu-toggle" aria-label="Toggle navigation" onClick={toggleMobileMenu}>
           <span className="hamburger"></span>
@@ -56,7 +56,6 @@ const Header = ({ onPageChange, currentPage }) => {
           <a href="#dashboard" className="mobile-nav-link" data-page="dashboard" onClick={() => handleLinkClick('dashboard')}>Tourist Dashboard</a>
           <a href="#alerts" className="mobile-nav-link" data-page="alerts" onClick={() => handleLinkClick('alerts')}>Alerts</a>
           <a href="#help" className="mobile-nav-link" data-page="help" onClick={() => handleLinkClick('help')}>Help & Support</a>
-          <a href="#Login" className="mobile-nav-link" data-page="admin" onClick={() => handleLinkClick('admin')}>Admin</a>
           <div className="mobile-language-selector">
             <svg className="globe-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="10"/>
@@ -70,7 +69,10 @@ const Header = ({ onPageChange, currentPage }) => {
               <option value="ta">தமழ</option>
             </select>
           </div>
-          <a href="#register" className="btn btn-primary btn-sm" onClick={() => handleLinkClick('register')}>Register</a>
+          <div className="mobile-header-buttons">
+            <Link to="/login.html" className="btn btn-outline btn-sm">Login</Link>
+            <a href="#register" className="btn btn-primary btn-sm" onClick={() => handleLinkClick('register')}>Register</a>
+          </div>
         </div>
       </div>
     </header>
