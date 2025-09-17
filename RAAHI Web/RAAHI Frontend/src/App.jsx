@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from './contexts/AuthContext';
 import Header from './components/Shared/Header';
 import Footer from './components/Shared/Footer';
 import PanicButton from './components/Shared/PanicButton';
@@ -13,7 +14,7 @@ import Admin from './components/Admin';
 const App = () => {
   const [currentPage, setCurrentPage] = useState('home');
   const [isDarkTheme, setIsDarkTheme] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isAuthenticated, isLoading } = useAuth();
 
   // Theme management
   useEffect(() => {

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const Registration = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -11,12 +13,20 @@ const Registration = () => {
     nationality: 'Indian', 
     phone: '+919876543210', 
     email: 'anike@example.com', 
+    password: '',
+    confirmPassword: '',
     medical: '', 
     agree: false
   });
   const [itinerary, setItinerary] = useState([{ place: 'Delhi', from: '2025-10-01', to: '2025-10-05' }]);
   const [emergency, setEmergency] = useState([{ name: 'Kishan', relation: 'Friend', phone: '+919876543211' }]);
   const [isSuccessful, setIsSuccessful] = useState(false);
+  const [kycFile, setKycFile] = useState(null);
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const { register, isLoading } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Update progress bar and button visibility based on current step
@@ -50,8 +60,7 @@ const Registration = () => {
   };
   
   const handleNext = () => {
-    // Basic validation
-    if (currentStep < 4) {
+    if (validateStep(currentStep) && currentStep < 4) {
       setCurrentStep(prevStep => prevStep + 1);
     }
   };
@@ -62,10 +71,74 @@ const Registration = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setKycFile(file);
+    }
+  };
+
+  const validateStep = (step) => {
+    const newErrors = {};
+    
+    if (step === 1) {
+      if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required';
+      if (!formData.idNumber.trim()) newErrors.idNumber = 'ID number is required';
+      if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
+      if (!formData.email.trim()) newErrors.email = 'Email is required';
+      if (!formData.password.trim()) newErrors.password = 'Password is required';
+      if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
+      if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.agree) {
-      setIsSuccessful(true);
+    
+    if (!formData.agree) {
+      setErrors({ agree: 'You must agree to the terms and conditions' });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setErrors({});
+    
+    try {
+      // Prepare registration data
+      const registrationData = {
+        fullName: formData.fullName,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone,
+        idType: formData.idType,
+        idNumber: formData.idNumber,
+        dateOfBirth: formData.dob,
+        gender: formData.gender,
+        nationality: formData.nationality,
+        medicalConditions: formData.medical,
+        itinerary: itinerary,
+        emergencyContacts: emergency,
+        userType: 'tourist' // Default user type for registration
+      };
+      
+      const result = await register(registrationData);
+      
+      if (result.success) {
+        setIsSuccessful(true);
+        // Optionally redirect after success
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 3000);
+      } else {
+        setErrors({ submit: result.error || 'Registration failed' });
+      }
+    } catch (error) {
+      setErrors({ submit: 'An unexpected error occurred. Please try again.' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -80,7 +153,7 @@ const Registration = () => {
                 <div className="form-group">
                   <label htmlFor="fullName">Full Name</label>
                   <input type="text" id="fullName" name="fullName" value={formData.fullName} onChange={handleInputChange} />
-                  <div className="error-message" id="error-fullName"></div>
+                  <div className="error-message">{errors.fullName}</div>
                 </div>
                 <div className="form-row">
                   <div className="form-group">
@@ -94,7 +167,7 @@ const Registration = () => {
                   <div className="form-group">
                     <label htmlFor="idNumber">Passport/Aadhaar No.</label>
                     <input type="text" id="idNumber" name="idNumber" value={formData.idNumber} onChange={handleInputChange} />
-                    <div className="error-message" id="error-idNumber"></div>
+                    <div className="error-message">{errors.idNumber}</div>
                   </div>
                 </div>
                 <div className="form-row">
@@ -121,17 +194,29 @@ const Registration = () => {
                   <div className="form-group">
                     <label htmlFor="phone">Phone</label>
                     <input type="tel" id="phone" name="phone" placeholder="+911234567890" value={formData.phone} onChange={handleInputChange} />
-                    <div className="error-message" id="error-phone"></div>
+                    <div className="error-message">{errors.phone}</div>
                   </div>
                   <div className="form-group">
                     <label htmlFor="email">Email</label>
                     <input type="email" id="email" name="email" value={formData.email} onChange={handleInputChange} />
-                    <div className="error-message" id="error-email"></div>
+                    <div className="error-message">{errors.email}</div>
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Create a password" value={formData.password} onChange={handleInputChange} />
+                    <div className="error-message">{errors.password}</div>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm password" value={formData.confirmPassword} onChange={handleInputChange} />
+                    <div className="error-message">{errors.confirmPassword}</div>
                   </div>
                 </div>
                 <div className="form-group">
                   <label htmlFor="kycUpload">Upload KYC (Passport/Aadhaar PDF or Image)</label>
-                  <input type="file" id="kycUpload" accept="image/*,.pdf" />
+                  <input type="file" id="kycUpload" accept="image/*,.pdf" onChange={handleFileChange} />
                   <div id="upload-status"></div>
                 </div>
               </div>
@@ -282,10 +367,17 @@ const Registration = () => {
             <div className="registration-content">
               <div className="registration-form">
                 {renderStepContent()}
+                {errors.submit && (
+                  <div className="error-message" style={{ color: '#ff4444', textAlign: 'center', marginBottom: '1rem', padding: '0.5rem', backgroundColor: 'rgba(255, 68, 68, 0.1)', borderRadius: '4px' }}>
+                    {errors.submit}
+                  </div>
+                )}
                 <div className="registration-nav">
                   <button type="button" className="btn btn-outline" id="back-btn" disabled={currentStep === 1} onClick={handleBack}>Back</button>
-                  {currentStep < 4 && <button type="button" className="btn btn-primary" id="next-btn" onClick={handleNext}>Continue</button>}
-                  {currentStep === 4 && <button type="button" className="btn btn-success" id="submit-btn" disabled={!formData.agree} onClick={handleSubmit}>Confirm & Generate ID</button>}
+                  {currentStep < 4 && <button type="button" className="btn btn-primary" id="next-btn" onClick={handleNext} disabled={isSubmitting}>Continue</button>}
+                  {currentStep === 4 && <button type="button" className="btn btn-success" id="submit-btn" disabled={!formData.agree || isSubmitting || isLoading} onClick={handleSubmit}>
+                    {isSubmitting || isLoading ? 'Creating Account...' : 'Confirm & Generate ID'}
+                  </button>}
                 </div>
               </div>
               <div className="registration-sidebar">

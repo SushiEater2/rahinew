@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import apiService from '../../services/api';
 
 const Chatbot = () => {
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
@@ -10,8 +11,7 @@ const Chatbot = () => {
   ]);
   const [userInput, setUserInput] = useState('');
 
-  const GEMINI_API_KEY = "AIzaSyCAOfhE8qZIwEEb0pdeSU6X7W54Szoip4g";
-  const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+  // Remove hardcoded API keys - now using backend
 
   const toggleChatbot = () => {
     setIsChatbotOpen(!isChatbotOpen);
@@ -29,32 +29,8 @@ const Chatbot = () => {
     setMessages(prevMessages => [...prevMessages, typingIndicator]);
 
     try {
-      const response = await fetch(GEMINI_API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{
-            role: "user",
-            parts: [{
-              text: `You are Rahi, a helpful travel assistant for the RAAHI (RAAHI Safety Monitoring & Incident Response System). You specialize in:
-
-1. Tourist safety information and tips
-2. RAAHI system features (Digital Tourist ID, safety alerts, emergency help, risk zone mapping, panic button, 24/7 support)
-3. Popular tourist destinations in India with safety considerations
-4. Emergency procedures and contacts
-5. Travel planning and registration guidance
-
-Always be helpful, friendly, and focus on safety. If asked about topics outside your expertise, politely redirect to travel and safety topics.
-
-User question: ${newUserMessage.text}`
-            }]
-          }]
-        }),
-      });
-
-      if (!response.ok) throw new Error(`API error: ${response.status}`);
-      const data = await response.json();
-      const botText = data.candidates?.[0]?.content?.parts?.[0]?.text || "I'm sorry, I'm having trouble connecting right now. Please try again later.";
+      const response = await apiService.ai.getChatbotResponse(newUserMessage.text);
+      const botText = response.message || "I'm sorry, I'm having trouble connecting right now. Please try again later.";
       
       setMessages(prevMessages => 
         prevMessages.filter(msg => !msg.isTyping).concat({ text: botText, sender: 'bot' })
