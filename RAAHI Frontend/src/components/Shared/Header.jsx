@@ -19,7 +19,7 @@ const Header = ({ onPageChange, currentPage }) => {
     <header className="header">
       <div className="container header-content">
         <Link to="/" className="logo">
-          Smart Tourist Safety
+          RAAHI
         </Link>
         <nav className="nav-desktop">
           <a href="#home" className={`nav-link ${currentPage === 'home' ? 'active' : ''}`} onClick={() => handleLinkClick('home')}>Home</a>

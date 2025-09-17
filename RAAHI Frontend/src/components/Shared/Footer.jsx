@@ -6,7 +6,7 @@ const Footer = () => {
       <div className="container">
         <div className="footer-content">
           <div className="footer-section">
-            <h3>Smart Tourist Safety</h3>
+            <h3>RAAHI</h3>
             <p>Government-backed initiative for tourist safety and monitoring.</p>
           </div>
           <div className="footer-section">
@@ -28,7 +28,7 @@ const Footer = () => {
           </div>
         </div>
         <div className="footer-bottom">
-          <p>&copy; 2024 Smart Tourist Safety System. All rights reserved.</p>
+          <p>&copy; 2024 RAAHI System. All rights reserved.</p>
         </div>
       </div>
     </footer>

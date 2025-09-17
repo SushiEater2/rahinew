@@ -12,7 +12,7 @@ body {
   align-items: center;
   min-height: 100vh;
   overflow: hidden;
-  background: linear-gradient(-45deg, #1a1a2e, #1a1a2e, #1a1a2e, #1a1a2e);
+  background: linear-gradient(-45deg, #f5f2ee, #f0ebe4, #ebe5d8, #f5f2ee);
   background-size: 400% 400%;
   animation: gradientMove 15s ease infinite;
   transition: background 0.4s, color 0.4s;
@@ -43,14 +43,14 @@ body.light-mode {
 
 /* Login Box */
 .login-container {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(140, 103, 75, 0.15);
   backdrop-filter: blur(20px);
   border-radius: 20px;
   padding: 30px;
   width: 400px;
-  color: #f1eeee;
+  color: #5c4a3a;
   text-align: center;
-  box-shadow: 0px 10px 25px rgba(0,0,0,0.4);
+  box-shadow: 0px 10px 25px rgba(92, 74, 58, 0.3);
   z-index: 10;
 }
 
@@ -67,19 +67,20 @@ body.light-mode {
   border: none;
   border-radius: 12px;
   margin: 0 5px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #1d1c1c;
+  background: rgba(140, 103, 75, 0.1);
+  color: #5c4a3a;
   cursor: pointer;
   transition: background 0.3s, transform 0.2s;
 }
 
 .tab.active {
-  background: linear-gradient(135deg, #ff416c, #ff4b2b);
+  background: linear-gradient(135deg, #8c674b, #6b4e37);
+  color: #f5f2ee;
   transform: scale(1.05);
 }
 
 .tab:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(140, 103, 75, 0.2);
 }
 
 /* Forms */
@@ -128,8 +129,8 @@ h2 {
   padding: 12px;
   border: none;
   border-radius: 10px;
-  background: linear-gradient(135deg, #ff416c, #ff4b2b);
-  color: #0e0b0b;
+  background: linear-gradient(135deg, #8c674b, #6b4e37);
+  color: #f5f2ee;
   font-size: 1rem;
   cursor: pointer;
   transition: transform 0.2s ease, background 0.3s;
@@ -137,7 +138,7 @@ h2 {
 
 .login-btn:hover {
   transform: scale(1.05);
-  background: linear-gradient(135deg, #ff4b2b, #ff416c);
+  background: linear-gradient(135deg, #6b4e37, #8c674b);
 }
 
 /* Dark/Light Mode Toggle */
@@ -145,21 +146,21 @@ h2 {
   position: absolute;
   top: 20px;
   right: 20px;
-  background: #0f0f0f;
-  color: #fff;
+  background: #6b4e37;
+  color: #f5f2ee;
   border: none;
   border-radius: 50%;
   width: 45px;
   height: 45px;
   font-size: 1.2rem;
   cursor: pointer;
-  box-shadow: 0px 4px 10px rgba(0,0,0,0.4);
+  box-shadow: 0px 4px 10px rgba(92, 74, 58, 0.4);
   transition: background 0.3s, transform 0.2s;
   z-index: 11;
 }
 
 .mode-btn:hover {
-  background: #222;
+  background: #8c674b;
   transform: scale(1.1);
 }
 

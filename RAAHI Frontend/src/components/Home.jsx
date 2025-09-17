@@ -67,18 +67,11 @@ const Home = ({ onPageChange }) => {
       <section className="hero">
         <div className="container hero-content">
           <div className="hero-text">
-            <div className="badge">
-              <svg className="shield-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                <path d="m9 12 2 2 4-4"/>
-              </svg>
-              Government-backed Initiative
-            </div>
             <h1 className="hero-title">
               Smart Tourism, Safe Tourism
             </h1>
             <p className="hero-description">
-              Smart Tourist Safety Monitoring & Incident Response System.
+              RAAHI Tourist Safety Monitoring & Incident Response System.
               Trusted, modern and accessible for every citizen.
             </p>
             <div className="hero-buttons">
