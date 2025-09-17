@@ -13,8 +13,13 @@ class DatabaseManager {
       console.log('🔗 Initializing database connections...');
 
       // Connect to MongoDB
-      await connectMongoDB();
-      console.log('✅ MongoDB connection established');
+      try {
+        await connectMongoDB();
+        console.log('✅ MongoDB connection established');
+      } catch (mongoError) {
+        console.warn('⚠️  MongoDB connection failed:', mongoError.message);
+        console.log('📝 Server will continue without MongoDB - please check your MongoDB connection');
+      }
 
       // Initialize Firebase (optional for now)
       try {
@@ -41,7 +46,12 @@ class DatabaseManager {
 
     } catch (error) {
       console.error('❌ Database connection failed:', error.message);
-      throw error;
+      console.log('📝 Server will start without database connection. Some features may not work.');
+      // Don't throw error - allow server to start
+      return {
+        mongodb: false,
+        firebase: this.firebaseServices
+      };
     }
   }
 
