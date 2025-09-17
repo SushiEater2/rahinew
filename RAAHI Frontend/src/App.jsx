@@ -112,19 +112,10 @@ const App = () => {
   }, []);
 
   const handlePageChange = (pageId) => {
-    // Check if trying to access dashboard without authentication
-    if (pageId === 'dashboard' && !isAuthenticated) {
-      const userChoice = window.confirm(
-        'You need to login or register to access the Tourist Dashboard.\n\nClick OK to go to Login page, or Cancel to go to Registration page.'
-      );
-      
-      if (userChoice) {
-        // Redirect to login page
-        window.location.href = '/login.html';
-      } else {
-        // Redirect to registration page
-        setCurrentPage('register');
-      }
+    // Check if trying to access dashboard - always redirect to login
+    if (pageId === 'dashboard') {
+      // Redirect directly to login page
+      window.location.href = '/login.html';
       return;
     }
     

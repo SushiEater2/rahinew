@@ -25,10 +25,10 @@ body {
 }
 
 body.light-mode {
-  background: linear-gradient(-45deg, #b6c3c6, #b6c3c6, #b6c3c6, #b6c3c6);
+  background: linear-gradient(-45deg, #f5f2ee, #f0ebe4, #ebe5d8, #f5f2ee);
   background-size: 400% 400%;
   animation: gradientMove 15s ease infinite;
-  color: #333;
+  color: #5c4a3a;
 }
 
 /* Login Page Wrapper */
@@ -165,6 +165,6 @@ h2 {
 }
 
 body.light-mode .mode-btn {
-  background: #ddd;
-  color: #000;
+  background: #8c674b;
+  color: #f5f2ee;
 }
