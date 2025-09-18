@@ -5,6 +5,7 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config();
+const mongoose = require("mongoose");
 
 // Import database manager
 const databaseManager = require('./config/database');
@@ -47,7 +48,7 @@ const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (mobile apps, etc.)
     if (!origin) return callback(null, true);
-    
+
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:3001',
@@ -55,15 +56,15 @@ const corsOptions = {
       'http://localhost:8080',
       // Add your production domains here
     ];
-    
+
     if (process.env.NODE_ENV === 'development') {
       return callback(null, true);
     }
-    
+
     if (allowedOrigins.indexOf(origin) !== -1) {
       return callback(null, true);
     }
-    
+
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
@@ -148,11 +149,11 @@ app.use(errorHandler);
 // Graceful shutdown handler
 const gracefulShutdown = async (signal) => {
   console.log(`\n📡 Received ${signal}. Starting graceful shutdown...`);
-  
+
   // Stop accepting new requests
   server.close(async () => {
     console.log('🚪 HTTP server closed');
-    
+
     try {
       // Close database connections
       await databaseManager.disconnect();
@@ -163,7 +164,7 @@ const gracefulShutdown = async (signal) => {
       process.exit(1);
     }
   });
-  
+
   // Force close after 30 seconds
   setTimeout(() => {
     console.log('⏰ Forcing shutdown after 30 seconds...');
@@ -179,7 +180,7 @@ const startServer = async () => {
     // Initialize database connections
     console.log('🚀 Starting Smart Tourism Backend...');
     await databaseManager.connect();
-    
+
     const PORT = process.env.PORT || 3000;
     server = app.listen(PORT, () => {
       console.log(`🌐 Server running on port ${PORT}`);
@@ -187,24 +188,24 @@ const startServer = async () => {
       console.log(`📍 API Base URL: http://localhost:${PORT}/api`);
       console.log('✅ Smart Tourism Backend is ready!');
     });
-    
+
     // Handle graceful shutdown
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-    
+
     // Handle uncaught exceptions
     process.on('uncaughtException', (error) => {
       console.error('💥 Uncaught Exception:', error);
       process.exit(1);
     });
-    
+
     process.on('unhandledRejection', (reason, promise) => {
       console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
       process.exit(1);
     });
-    
+
     return server;
-    
+
   } catch (error) {
     console.error('❌ Failed to start server:', error.message);
     process.exit(1);
