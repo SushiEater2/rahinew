@@ -1,14 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import apiService from '../services/api';
-import { auth } from '../firebase';
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  updateProfile,
-  sendEmailVerification
-} from 'firebase/auth';
 
 // Create the Auth Context
 const AuthContext = createContext();
@@ -27,54 +18,11 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [firebaseUser, setFirebaseUser] = useState(null);
 
   // Initialize authentication state on app load
   useEffect(() => {
     initializeAuth();
-    
-    // Set up Firebase auth state listener
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setFirebaseUser(firebaseUser);
-      if (firebaseUser) {
-        // Firebase user is signed in
-        handleFirebaseAuthChange(firebaseUser);
-      } else {
-        // Firebase user is signed out
-        if (isAuthenticated) {
-          clearAuth();
-        }
-      }
-    });
-
-    return () => unsubscribe();
   }, []);
-
-  const handleFirebaseAuthChange = async (firebaseUser) => {
-    try {
-      // Get Firebase ID token
-      const idToken = await firebaseUser.getIdToken();
-      
-      // Verify with our backend
-      const response = await apiService.auth.verifyFirebaseToken({ firebaseToken: idToken });
-      
-      if (response.success && response.token) {
-        // Store backend JWT token and user data
-        localStorage.setItem('authToken', response.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        
-        setUser(response.data.user);
-        setIsAuthenticated(true);
-      }
-    } catch (error) {
-      console.error('Firebase auth change error:', error);
-      // If backend verification fails, sign out from Firebase
-      await signOut(auth);
-      clearAuth();
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const initializeAuth = async () => {
     try {
@@ -82,13 +30,23 @@ export const AuthProvider = ({ children }) => {
       const savedUser = localStorage.getItem('user');
 
       if (token && savedUser) {
-        // Verify token is still valid
-        try {
-          const userData = await apiService.users.getProfile();
+        const userData = JSON.parse(savedUser);
+        
+        // If it's a mock token, just restore the user state
+        if (token.startsWith('mock-jwt-token-')) {
           setUser(userData);
+          setIsAuthenticated(true);
+          return;
+        }
+        
+        // For real tokens, verify with backend
+        try {
+          const profileData = await apiService.users.getProfile();
+          setUser(profileData);
           setIsAuthenticated(true);
         } catch (error) {
           // Token is invalid, clear storage
+          console.warn('Token verification failed:', error.message);
           clearAuth();
         }
       }
@@ -103,49 +61,55 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       setIsLoading(true);
-      const { email, password } = credentials;
       
-      // Sign in with Firebase
-      const firebaseCredential = await signInWithEmailAndPassword(auth, email, password);
-      const firebaseUser = firebaseCredential.user;
-      
-      // Check if email is verified
-      if (!firebaseUser.emailVerified) {
-        await signOut(auth);
-        return { 
-          success: false, 
-          error: 'Please verify your email address before logging in. Check your inbox for the verification link.' 
+      // Mock authentication for development (check for specific credentials)
+      if (credentials.email === 'anike@example.com' && credentials.password === 'asdfghjkl') {
+        const mockUser = {
+          id: '1',
+          email: 'anike@example.com',
+          fullName: 'Anike Kumar',
+          firstName: 'Anike',
+          lastName: 'Kumar',
+          phone: '+919876543210',
+          touristId: 'TID-2024-001',
+          userType: 'tourist',
+          role: 'user'
         };
+        
+        // Store mock token and user data
+        localStorage.setItem('authToken', 'mock-jwt-token-' + Date.now());
+        localStorage.setItem('user', JSON.stringify(mockUser));
+        
+        setUser(mockUser);
+        setIsAuthenticated(true);
+        
+        return { success: true, message: 'Login successful' };
       }
       
-      // Firebase auth state change will handle the rest
-      return { success: true, message: 'Login successful' };
+      // If not using mock credentials, try backend authentication
+      try {
+        const response = await apiService.auth.login(credentials);
+        
+        if (response.success && response.token) {
+          // Store backend JWT token and user data
+          localStorage.setItem('authToken', response.token);
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+          
+          setUser(response.data.user);
+          setIsAuthenticated(true);
+          
+          return { success: true, message: 'Login successful' };
+        } else {
+          return { success: false, error: response.error || 'Login failed' };
+        }
+      } catch (apiError) {
+        console.warn('Backend authentication failed:', apiError.message);
+        return { success: false, error: 'Invalid credentials' };
+      }
       
     } catch (error) {
       console.error('Login error:', error);
-      
-      let errorMessage = 'Login failed';
-      
-      if (error.code) {
-        // Firebase error codes
-        switch (error.code) {
-          case 'auth/user-not-found':
-          case 'auth/wrong-password':
-          case 'auth/invalid-credential':
-            errorMessage = 'Invalid email or password';
-            break;
-          case 'auth/too-many-requests':
-            errorMessage = 'Too many failed attempts. Please try again later';
-            break;
-          case 'auth/user-disabled':
-            errorMessage = 'This account has been disabled';
-            break;
-          default:
-            errorMessage = error.message;
-        }
-      }
-      
-      return { success: false, error: errorMessage };
+      return { success: false, error: 'Login failed' };
     } finally {
       setIsLoading(false);
     }
@@ -155,71 +119,34 @@ export const AuthProvider = ({ children }) => {
     try {
       setIsLoading(true);
       
-      const { email, password, fullName, ...otherData } = userData;
+      const { fullName, ...otherData } = userData;
       
-      // Step 1: Create Firebase user
-      const firebaseCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const firebaseUser = firebaseCredential.user;
-      
-      // Step 2: Update Firebase user profile
-      await updateProfile(firebaseUser, {
-        displayName: fullName
-      });
-      
-      // Step 3: Send email verification
-      await sendEmailVerification(firebaseUser);
-      
-      // Step 4: Register with backend
       // Parse fullName into firstName and lastName
       const nameParts = fullName.split(' ');
       const firstName = nameParts[0] || '';
       const lastName = nameParts.slice(1).join(' ') || '';
       
       const backendData = {
-        email,
-        password,
-        username: email.split('@')[0], // Use email prefix as username
+        ...otherData,
+        username: userData.email.split('@')[0], // Use email prefix as username
         firstName,
-        lastName,
-        ...otherData
+        lastName
       };
       
+      // Register with backend only
       const response = await apiService.auth.register(backendData);
       
       if (response.success) {
-        // Backend registration successful - Firebase auth state change will handle the rest
         console.log('✅ Registration successful');
-        return { success: true, user: response.data.user, requiresVerification: true };
+        return { success: true, user: response.data.user, message: 'Registration successful' };
       } else {
-        // Backend registration failed, cleanup Firebase user
-        await firebaseUser.delete();
-        throw new Error(response.error || 'Backend registration failed');
+        throw new Error(response.error || 'Registration failed');
       }
       
     } catch (error) {
       console.error('Registration error:', error);
       
-      let errorMessage = 'Registration failed';
-      
-      if (error.code) {
-        // Firebase error codes
-        switch (error.code) {
-          case 'auth/email-already-in-use':
-            errorMessage = 'This email is already registered';
-            break;
-          case 'auth/weak-password':
-            errorMessage = 'Password is too weak. Please use at least 6 characters';
-            break;
-          case 'auth/invalid-email':
-            errorMessage = 'Invalid email address';
-            break;
-          default:
-            errorMessage = error.message;
-        }
-      } else {
-        errorMessage = error.response?.data?.error || error.message || errorMessage;
-      }
-      
+      const errorMessage = error.response?.data?.error || error.message || 'Registration failed';
       return { success: false, error: errorMessage };
     } finally {
       setIsLoading(false);
@@ -228,10 +155,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      // Sign out from Firebase (this will trigger the auth state change)
-      await signOut(auth);
-      
-      // Try to call backend logout endpoint
+      // Call backend logout endpoint
       try {
         await apiService.auth.logout();
       } catch (error) {
@@ -239,9 +163,12 @@ export const AuthProvider = ({ children }) => {
         // Continue with logout even if backend call fails
       }
       
+      // Clear local auth state
+      clearAuth();
+      
     } catch (error) {
       console.error('Logout error:', error);
-      // Force clear auth state even if Firebase signOut fails
+      // Force clear auth state
       clearAuth();
     }
   };
@@ -276,7 +203,7 @@ export const AuthProvider = ({ children }) => {
     try {
       setIsLoading(true);
       const response = await apiService.auth.forgotPassword(email);
-      return { success: true, message: response.message };
+      return { success: true, message: response.message || 'Password reset email sent' };
     } catch (error) {
       console.error('Forgot password error:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Password reset failed';
@@ -290,7 +217,7 @@ export const AuthProvider = ({ children }) => {
     try {
       setIsLoading(true);
       const response = await apiService.auth.resetPassword(token, newPassword);
-      return { success: true, message: response.message };
+      return { success: true, message: response.message || 'Password reset successful' };
     } catch (error) {
       console.error('Reset password error:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Password reset failed';

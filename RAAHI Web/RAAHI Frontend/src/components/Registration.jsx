@@ -107,7 +107,7 @@ const Registration = () => {
     setErrors({});
     
     try {
-      // Prepare registration data for Firebase + Backend integration
+      // Prepare registration data for backend
       const registrationData = {
         fullName: formData.fullName,
         email: formData.email,

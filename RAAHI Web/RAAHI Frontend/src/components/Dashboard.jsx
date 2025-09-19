@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import apiService from '../services/api';
+import '../styles/dashboard-enhancements.css';
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
@@ -23,14 +24,47 @@ const Dashboard = () => {
     try {
       setIsLoading(true);
       
-      // Load user profile and alerts in parallel
-      const [profileData, alertsData] = await Promise.all([
-        apiService.users.getProfile(),
-        apiService.alerts.getAll()
-      ]);
+      // Check if using mock authentication
+      const token = localStorage.getItem('authToken');
+      if (token && token.startsWith('mock-jwt-token-')) {
+        // Use mock data
+        const mockAlerts = [
+          {
+            id: '1',
+            title: 'Weather Advisory',
+            description: 'Heavy rain expected in your area. Carry umbrella.',
+            severity: 'medium',
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: '2',
+            title: 'Tourist Safety Update',
+            description: 'All major tourist attractions are safe and operational.',
+            severity: 'low',
+            createdAt: new Date(Date.now() - 86400000).toISOString()
+          }
+        ];
+        
+        setDashboardData(user);
+        setAlerts(mockAlerts);
+        setIsLoading(false);
+        return;
+      }
       
-      setDashboardData(profileData);
-      setAlerts(alertsData.alerts || []);
+      // Try to load from backend
+      try {
+        const [profileData, alertsData] = await Promise.all([
+          apiService.users.getProfile(),
+          apiService.alerts.getAll()
+        ]);
+        
+        setDashboardData(profileData);
+        setAlerts(alertsData.alerts || []);
+      } catch (apiError) {
+        console.warn('Backend API not available, using user data from context:', apiError.message);
+        setDashboardData(user);
+        setAlerts([]);
+      }
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
       setError('Failed to load dashboard data');
@@ -78,7 +112,7 @@ const Dashboard = () => {
           <button onClick={handleLogout} className="btn btn-outline">Logout</button>
         </div>
         
-        <div className="dashboard-grid">
+        <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginTop: '2rem' }}>
           {/* User Profile Card */}
           <div className="card">
             <div className="card-header">
@@ -138,7 +172,7 @@ const Dashboard = () => {
               <h3 className="card-title">Quick Actions</h3>
             </div>
             <div className="card-content">
-              <div className="action-buttons">
+              <div className="action-buttons" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <button className="btn btn-primary" onClick={() => navigate('/alerts')}>View All Alerts</button>
                 <button className="btn btn-outline" onClick={() => navigate('/help')}>Get Help</button>
                 <button className="btn btn-success" onClick={loadDashboardData}>Refresh Data</button>
