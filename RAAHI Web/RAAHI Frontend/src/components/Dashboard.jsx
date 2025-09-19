@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import apiService from '../services/api';
-import GoogleMap from './GoogleMap';
+import SimpleMap from './SimpleMap';
 import '../styles/modern-dashboard.css';
 
 const Dashboard = () => {
@@ -186,6 +186,13 @@ const Dashboard = () => {
             <button 
               className={`tab-btn ${activeTab === 'map' ? 'active' : ''}`}
               onClick={() => setActiveTab('map')}
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              Map
+            </button>
+            <button 
+              className={`tab-btn ${activeTab === 'safety-map' ? 'active' : ''}`}
+              onClick={() => setActiveTab('safety-map')}
             >
               <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M20.5,3L20.34,3.03L15,5.1L9,3L3.36,4.9C3.15,4.97 3,5.15 3,5.38V20.5A0.5,0.5 0 0,0 3.5,21L3.66,20.97L9,18.9L15,21L20.64,19.1C20.85,19.03 21,18.85 21,18.62V3.5A0.5,0.5 0 0,0 20.5,3Z"/></svg>
               Safety Map
@@ -417,11 +424,73 @@ const Dashboard = () => {
 
             {activeTab === 'map' && (
               <div className="map-tab">
+                <div className="simple-map-section">
+                  <div className="map-header">
+                    <h3>🗺️ Interactive Map</h3>
+                    <p style={{ margin: '8px 0', color: '#6b7280', fontSize: '14px' }}>
+                      Explore popular tourist attractions around Delhi
+                    </p>
+                  </div>
+                  
+                  <div className="map-container">
+                    <SimpleMap 
+                      onLocationUpdate={handleLocationUpdate}
+                    />
+                    
+                    <div className="map-info" style={{ 
+                      marginTop: '20px', 
+                      padding: '20px', 
+                      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)', 
+                      borderRadius: '12px',
+                      border: '1px solid #e2e8f0'
+                    }}>
+                      <h4 style={{ margin: '0 0 15px 0', color: '#374151', fontSize: '16px' }}>Map Features:</h4>
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+                        gap: '15px' 
+                      }}>
+                        <div className="feature-item" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ 
+                            width: '12px', 
+                            height: '12px', 
+                            borderRadius: '50%', 
+                            backgroundColor: '#007bff' 
+                          }}></div>
+                          <span style={{ fontSize: '14px', color: '#4b5563' }}>Your Current Location</span>
+                        </div>
+                        <div className="feature-item" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ 
+                            width: '12px', 
+                            height: '12px', 
+                            borderRadius: '50%', 
+                            backgroundColor: '#34d399' 
+                          }}></div>
+                          <span style={{ fontSize: '14px', color: '#4b5563' }}>Tourist Attractions</span>
+                        </div>
+                        <div className="feature-item" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '14px', color: '#4b5563' }}>🏛️ Historic Sites</span>
+                        </div>
+                        <div className="feature-item" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '14px', color: '#4b5563' }}>📍 Click markers for details</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'safety-map' && (
+              <div className="map-tab">
                 <div className="map-safety-grid">
                   {/* Google Maps Section */}
                   <div className="interactive-map-section">
                     <div className="map-header">
-                      <h3>Interactive Safety Map</h3>
+                      <h3>🛡️ Interactive Safety Map</h3>
+                      <p style={{ margin: '8px 0', color: '#6b7280', fontSize: '14px' }}>
+                        Real-time safety information for different areas
+                      </p>
                       <div className="map-controls">
                         <button className="map-control-btn active">
                           <svg viewBox="0 0 24 24" width="16" height="16">

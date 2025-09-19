@@ -1,16 +1,10 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import '../styles/google-maps.css';
 
-const GoogleMap = ({ 
-  onLocationUpdate, 
-  safetyData = [], 
-  emergencyServices = [], 
-  touristAttractions = [] 
-}) => {
+const SimpleMap = ({ onLocationUpdate }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef([]);
-  const circlesRef = useRef([]);
   const [userLocation, setUserLocation] = useState(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
@@ -18,13 +12,8 @@ const GoogleMap = ({
 
   // Cleanup function
   const cleanupMap = useCallback(() => {
-    // Clear all markers
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
-    
-    // Clear all circles
-    circlesRef.current.forEach(circle => circle.setMap(null));
-    circlesRef.current = [];
   }, []);
 
   // Initialize Google Map
@@ -35,14 +24,13 @@ const GoogleMap = ({
     }
 
     try {
-      // Cleanup any existing markers/circles
       cleanupMap();
 
       // Default location (India Gate, New Delhi)
       const defaultLocation = { lat: 28.6129, lng: 77.2295 };
       
       const mapOptions = {
-        zoom: 12,
+        zoom: 13,
         center: defaultLocation,
         mapTypeId: window.google.maps.MapTypeId.ROADMAP,
         disableDefaultUI: false,
@@ -52,14 +40,7 @@ const GoogleMap = ({
         streetViewControl: true,
         rotateControl: true,
         fullscreenControl: true,
-        gestureHandling: 'cooperative',
-        styles: [
-          {
-            "featureType": "poi",
-            "elementType": "labels",
-            "stylers": [{"visibility": "simplified"}]
-          }
-        ]
+        gestureHandling: 'cooperative'
       };
 
       const map = new window.google.maps.Map(mapRef.current, mapOptions);
@@ -68,10 +49,10 @@ const GoogleMap = ({
       // Wait for map to be fully loaded
       google.maps.event.addListenerOnce(map, 'idle', () => {
         setMapLoaded(true);
-        console.log('Map fully loaded and ready');
+        console.log('Simple map fully loaded');
       });
 
-      // Add resize listener to handle container changes
+      // Add resize listener
       google.maps.event.addListener(map, 'resize', () => {
         if (userLocation) {
           map.setCenter(userLocation);
@@ -136,7 +117,6 @@ const GoogleMap = ({
           },
           (error) => {
             console.warn('Geolocation error:', error);
-            // Fallback to default location
             if (onLocationUpdate) {
               onLocationUpdate({
                 lat: defaultLocation.lat,
@@ -152,8 +132,55 @@ const GoogleMap = ({
           }
         );
       }
+
+      // Add some popular tourist attractions as markers
+      const touristSpots = [
+        { name: 'Red Fort', lat: 28.6562, lng: 77.2410, icon: '🏛️' },
+        { name: 'India Gate', lat: 28.6129, lng: 77.2295, icon: '🏛️' },
+        { name: 'Lotus Temple', lat: 28.5535, lng: 77.2588, icon: '🪷' },
+        { name: 'Qutub Minar', lat: 28.5245, lng: 77.1855, icon: '🗼' },
+        { name: 'Humayun\'s Tomb', lat: 28.5933, lng: 77.2507, icon: '🏛️' },
+        { name: 'Akshardham Temple', lat: 28.6127, lng: 77.2773, icon: '🛕' },
+        { name: 'Jama Masjid', lat: 28.6507, lng: 77.2334, icon: '🕌' }
+      ];
+
+      touristSpots.forEach(spot => {
+        const marker = new window.google.maps.Marker({
+          position: { lat: spot.lat, lng: spot.lng },
+          map: map,
+          title: spot.name,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            fillColor: '#34d399',
+            fillOpacity: 0.9,
+            strokeColor: '#ffffff',
+            strokeWeight: 2,
+            scale: 10
+          }
+        });
+
+        const infoWindow = new window.google.maps.InfoWindow({
+          content: `
+            <div style="padding: 12px; min-width: 200px;">
+              <h3 style="margin: 0 0 8px 0; color: #333; font-size: 16px;">
+                ${spot.icon} ${spot.name}
+              </h3>
+              <p style="margin: 0; color: #666; font-size: 14px;">
+                📍 Tourist Attraction
+              </p>
+            </div>
+          `
+        });
+
+        marker.addListener('click', () => {
+          infoWindow.open(map, marker);
+        });
+
+        markersRef.current.push(marker);
+      });
+
     } catch (error) {
-      console.error('Error initializing map:', error);
+      console.error('Error initializing simple map:', error);
     }
   }, [isScriptLoaded, onLocationUpdate, cleanupMap]);
 
@@ -171,7 +198,7 @@ const GoogleMap = ({
       return;
     }
 
-    console.log('Loading Google Maps API...');
+    console.log('Loading Google Maps API for simple map...');
     const script = document.createElement('script');
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
     script.async = true;
@@ -182,17 +209,15 @@ const GoogleMap = ({
     };
     script.onerror = (error) => {
       console.error('Failed to load Google Maps API:', error);
-      console.error('Please check your API key and network connection.');
     };
     document.head.appendChild(script);
 
-    // Cleanup on unmount
     return () => {
       script.remove();
     };
   }, []);
 
-  // Intersection Observer to detect when map becomes visible
+  // Intersection Observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -217,7 +242,7 @@ const GoogleMap = ({
     if (isScriptLoaded && isVisible) {
       const timer = setTimeout(() => {
         initMap();
-      }, 100); // Small delay to ensure DOM is ready
+      }, 100);
       return () => clearTimeout(timer);
     }
   }, [isScriptLoaded, isVisible, initMap]);
@@ -235,111 +260,6 @@ const GoogleMap = ({
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [mapLoaded]);
-
-  // Add safety zones to map
-  useEffect(() => {
-    if (!mapLoaded || !mapInstanceRef.current || !window.google) return;
-
-    const map = mapInstanceRef.current;
-
-    // Sample safety zones data
-    const defaultSafetyZones = [
-      { name: 'Connaught Place', lat: 28.6315, lng: 77.2167, safety: 92, color: '#10b981' },
-      { name: 'India Gate', lat: 28.6129, lng: 77.2295, safety: 85, color: '#10b981' },
-      { name: 'Red Fort', lat: 28.6562, lng: 77.2410, safety: 88, color: '#10b981' },
-      { name: 'Karol Bagh', lat: 28.6519, lng: 77.1909, safety: 68, color: '#f59e0b' },
-      { name: 'Chandni Chowk', lat: 28.6506, lng: 77.2334, safety: 45, color: '#ef4444' },
-      { name: 'Lajpat Nagar', lat: 28.5677, lng: 77.2436, safety: 73, color: '#f59e0b' },
-    ];
-
-    const safetyZones = safetyData.length > 0 ? safetyData : defaultSafetyZones;
-    const currentMarkers = [];
-    const currentCircles = [];
-
-    safetyZones.forEach(zone => {
-      try {
-        // Create safety zone circle
-        const safetyCircle = new window.google.maps.Circle({
-          strokeColor: zone.color,
-          strokeOpacity: 0.8,
-          strokeWeight: 2,
-          fillColor: zone.color,
-          fillOpacity: 0.35,
-          map: map,
-          center: { lat: zone.lat, lng: zone.lng },
-          radius: 1000,
-          clickable: false
-        });
-        currentCircles.push(safetyCircle);
-
-        // Create marker for safety zone using symbol path
-        const marker = new window.google.maps.Marker({
-          position: { lat: zone.lat, lng: zone.lng },
-          map: map,
-          title: `${zone.name} - Safety Score: ${zone.safety}`,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            fillColor: zone.color,
-            fillOpacity: 1,
-            strokeColor: '#ffffff',
-            strokeWeight: 2,
-            scale: 16,
-            labelOrigin: new google.maps.Point(0, 0)
-          },
-          label: {
-            text: zone.safety.toString(),
-            color: 'white',
-            fontSize: '12px',
-            fontWeight: 'bold'
-          }
-        });
-        currentMarkers.push(marker);
-
-        // Info window for safety zone
-        const infoWindow = new window.google.maps.InfoWindow({
-          content: `
-            <div style="padding: 12px; min-width: 200px;">
-              <h3 style="margin: 0 0 10px 0; color: #333; font-size: 16px;">${zone.name}</h3>
-              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                <div style="
-                  background: ${zone.color}; 
-                  color: white; 
-                  padding: 6px 12px; 
-                  border-radius: 20px; 
-                  font-weight: bold;
-                  font-size: 14px;
-                ">
-                  Safety Score: ${zone.safety}
-                </div>
-              </div>
-              <p style="margin: 0; color: #666; font-size: 14px;">
-                ${zone.safety >= 80 ? '🟢 Very Safe Area' : 
-                  zone.safety >= 50 ? '🟡 Moderate Safety' : '🔴 High Risk Area'}
-              </p>
-            </div>
-          `,
-        });
-
-        marker.addListener('click', () => {
-          infoWindow.open(map, marker);
-        });
-      } catch (error) {
-        console.error('Error creating safety zone:', zone.name, error);
-      }
-    });
-
-    // Store references for cleanup
-    markersRef.current.push(...currentMarkers);
-    circlesRef.current.push(...currentCircles);
-
-    return () => {
-      currentMarkers.forEach(marker => marker.setMap(null));
-      currentCircles.forEach(circle => circle.setMap(null));
-    };
-  }, [mapLoaded, safetyData]);
-
-  // Emergency services and tourist attractions will be added in future updates
-  // Keeping the map simple for now to prevent conflicts
 
   // Cleanup on unmount
   useEffect(() => {
@@ -368,6 +288,7 @@ const GoogleMap = ({
           overflow: 'hidden'
         }}
       />
+      
       {(!mapLoaded || !isScriptLoaded) && (
         <div className="map-loading-overlay" style={{
           position: 'absolute',
@@ -403,7 +324,7 @@ const GoogleMap = ({
           <div style={{ fontSize: '14px', color: '#6b7280' }}>
             {!import.meta.env.VITE_GOOGLE_MAPS_API_KEY ? 
               '⚠️ API Key Missing - Check .env file' : 
-              'Connecting to Google Maps API...'}
+              'Setting up your map view...'}
           </div>
         </div>
       )}
@@ -413,15 +334,9 @@ const GoogleMap = ({
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
-        .google-map-container {
-          transition: opacity 0.3s ease-in-out;
-        }
-        .google-map-container.loading {
-          opacity: 0.7;
-        }
       `}</style>
     </div>
   );
 };
 
-export default GoogleMap;
+export default SimpleMap;
