@@ -1,9 +1,7 @@
 package com.example.rahi2.navigation
 
 import androidx.compose.runtime.Composable
-// import androidx.compose.runtime.LaunchedEffect // Not used in the provided snippet
 import androidx.compose.ui.Modifier
-// import androidx.navigation.NavGraphBuilder // Not directly used in the signature
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -13,29 +11,19 @@ import com.example.rahi2.ui.screens.IncidentReportScreen
 import com.example.rahi2.ui.screens.MainShellScreen
 import com.example.rahi2.ui.screens.SettingsScreen
 import com.example.rahi2.ui.screens.SplashScreen
+import com.example.rahi2.ui.screens.sos.SosDetailsScreen // Import for SosDetailsScreen
 import com.example.rahi2.ui.screens.tabs.HomeTab
 import com.example.rahi2.ui.screens.tabs.MapTab
 import com.example.rahi2.ui.screens.tabs.ProfileTab
 import com.example.rahi2.ui.strings.Language
-// import com.example.rahi2.ui.strings.EnglishStrings // No longer needed here
-// import com.example.rahi2.ui.strings.HindiStrings // No longer needed here
-// import com.example.rahi2.ui.strings.LocalStrings // No longer needed here
-// import androidx.compose.runtime.CompositionLocalProvider // No longer needed here
-// import androidx.compose.runtime.getValue // No longer needed for internal state
-// import androidx.compose.runtime.mutableStateOf // No longer needed for internal state
-// import androidx.compose.runtime.remember // No longer needed for internal state
-// import androidx.compose.runtime.setValue // No longer needed for internal state
 
 @Composable
 fun AppNavHost(
     navController: NavHostController,
     modifier: Modifier = Modifier,
-    currentLanguage: Language, // Added parameter
-    onChangeLanguage: (Language) -> Unit // Added parameter
+    currentLanguage: Language, 
+    onChangeLanguage: (Language) -> Unit
 ) {
-    // var isDark by remember { mutableStateOf(false) } // Removed
-    // var language by remember { mutableStateOf(Language.EN) } // Removed
-    // CompositionLocalProvider(LocalStrings provides if (language == Language.EN) EnglishStrings else HindiStrings) { // Removed
     NavHost(
         navController = navController,
         startDestination = NavRoute.Splash.route,
@@ -78,7 +66,8 @@ fun AppNavHost(
                 },
                     content = { HomeTab(
                         onReportIncident = { navController.navigate(NavRoute.IncidentReport.route) },
-                        onOpenMap = { navController.navigate(NavRoute.Map.route) }
+                        onOpenMap = { navController.navigate(NavRoute.Map.route) },
+                        onNavigateToSosDetails = { navController.navigate(NavRoute.SosDetails.route) } // Added navigation to SOS Details
                     ) }
                 )
             }
@@ -103,10 +92,8 @@ fun AppNavHost(
                         popUpTo(NavRoute.Home.route) { saveState = true }
                     }
                 }, content = { SettingsScreen(
-                    selectedLanguage = currentLanguage, // Updated
-                    onChangeLanguage = onChangeLanguage // Updated
-                    // darkMode = isDark, // Removed
-                    // onToggleDarkMode = { isDark = it } // Removed
+                    selectedLanguage = currentLanguage,
+                    onChangeLanguage = onChangeLanguage
                 ) })
             }
         }
@@ -118,8 +105,12 @@ fun AppNavHost(
 
         // Map as a standalone screen (from Home)
         composable(NavRoute.Map.route) {
-            MapTab()
+            MapTab() // Assuming MapTab doesn't need specific parameters like NavController for this usage
+        }
+        
+        // SOS Details Screen
+        composable(NavRoute.SosDetails.route) {
+            SosDetailsScreen(navController = navController)
         }
     }
-    // } // Removed closing brace for CompositionLocalProvider
 }
