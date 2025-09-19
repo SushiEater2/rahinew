@@ -28,26 +28,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
+// import androidx.compose.ui.graphics.Brush // No longer needed for Column background
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.rahi2.ui.strings.LocalStrings // Added import
+import com.example.rahi2.ui.strings.LocalStrings
 
 @Composable
 fun HomeTab(onReportIncident: () -> Unit, onOpenMap: () -> Unit) {
 	val context = LocalContext.current
+	val sosAccentColor = Color(0xFFFF3D00)
+	val mapAccentColor = Color(0xFF42A5F5)
+	val reportAccentColor = Color(0xFF66BB6A)
+
 	Column(
 		modifier = Modifier
 			.fillMaxSize()
-			.background(
-				Brush.verticalGradient(
-					listOf(
-						Color(0xFF101828),
-						Color(0xFF1D3557)
-					)
-				)
-			)
+			.background(Color.White) // Main background is white
 			.padding(16.dp),
 		horizontalAlignment = Alignment.CenterHorizontally,
 		verticalArrangement = Arrangement.Top
@@ -59,17 +56,17 @@ fun HomeTab(onReportIncident: () -> Unit, onOpenMap: () -> Unit) {
 		) {
 			Icon(Icons.Default.VerifiedUser, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
 			Text(
-				text = LocalStrings.current.appTitle, // Updated
-				style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+				text = LocalStrings.current.appTitle,
+				style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground),
 				modifier = Modifier.padding(start = 8.dp)
 			)
 		}
 		Spacer(modifier = Modifier.height(16.dp))
 
 		FeatureCard(
-			title = LocalStrings.current.homeSOS, // Updated
-			color = Color(0xFFFF3D00),
-			icon = { Icon(Icons.Default.Sos, contentDescription = null, tint = Color.White, modifier = Modifier.size(36.dp)) },
+			title = LocalStrings.current.homeSOS,
+			accentColor = sosAccentColor,
+			icon = { Icon(Icons.Default.Sos, contentDescription = null, tint = sosAccentColor, modifier = Modifier.size(36.dp)) },
 			onClick = {
 				val intent = android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:112"))
 				context.startActivity(intent)
@@ -77,16 +74,16 @@ fun HomeTab(onReportIncident: () -> Unit, onOpenMap: () -> Unit) {
 		)
 		Spacer(modifier = Modifier.height(12.dp))
 		FeatureCard(
-			title = LocalStrings.current.homeMap, // Updated
-			color = Color(0xFF42A5F5),
-			icon = { Icon(Icons.Default.Map, contentDescription = null, tint = Color.White, modifier = Modifier.size(36.dp)) },
+			title = LocalStrings.current.homeMap,
+			accentColor = mapAccentColor,
+			icon = { Icon(Icons.Default.Map, contentDescription = null, tint = mapAccentColor, modifier = Modifier.size(36.dp)) },
 			onClick = onOpenMap
 		)
 		Spacer(modifier = Modifier.height(12.dp))
 		FeatureCard(
-			title = LocalStrings.current.homeReportIncident, // Updated
-			color = Color(0xFF66BB6A),
-			icon = { Icon(Icons.Default.Report, contentDescription = null, tint = Color.White, modifier = Modifier.size(36.dp)) },
+			title = LocalStrings.current.homeReportIncident,
+			accentColor = reportAccentColor,
+			icon = { Icon(Icons.Default.Report, contentDescription = null, tint = reportAccentColor, modifier = Modifier.size(36.dp)) },
 			onClick = onReportIncident
 		)
 	}
@@ -95,22 +92,23 @@ fun HomeTab(onReportIncident: () -> Unit, onOpenMap: () -> Unit) {
 @Composable
 private fun FeatureCard(
 	title: String,
-	color: Color,
+	accentColor: Color,
 	icon: @Composable () -> Unit,
 	onClick: () -> Unit
 ) {
 	Card(
-		colors = CardDefaults.cardColors(containerColor = color),
+		colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
 		shape = RoundedCornerShape(18.dp),
 		modifier = Modifier
 			.fillMaxWidth()
 			.height(100.dp)
-			.clickable { onClick() }
+			.clickable { onClick() },
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp) // Adding a subtle elevation
 	) {
 		Row(
 			modifier = Modifier
 				.fillMaxSize()
-				.background(color.copy(alpha = 0.08f))
+				// Removed Row background, Card now handles it
 				.padding(16.dp),
 			verticalAlignment = Alignment.CenterVertically,
 			horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -118,10 +116,10 @@ private fun FeatureCard(
 			Box(
 				modifier = Modifier
 					.size(56.dp)
-					.background(color.copy(alpha = 0.25f), shape = RoundedCornerShape(12.dp)),
+					.background(accentColor.copy(alpha = 0.1f), shape = RoundedCornerShape(12.dp)), // Icon background with light accent tint
 				contentAlignment = Alignment.Center
-			) { icon() }
-			Text(title, style = MaterialTheme.typography.titleLarge, color = Color.White)
+			) { icon() } // Icon is now tinted by the caller
+			Text(title, style = MaterialTheme.typography.titleLarge, color = accentColor) // Text color is accent color
 		}
 	}
 }
