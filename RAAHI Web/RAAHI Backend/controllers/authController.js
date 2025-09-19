@@ -90,20 +90,25 @@ const register = async (req, res, next) => {
     let mongoUser = null;
 
     try {
-      // Initialize Firebase services
-      const firebaseServices = initializeFirebase();
-      const auth = firebaseServices.auth;
+      // Try to create Firebase user, but don't fail if Firebase is not available
+      try {
+        const firebaseServices = initializeFirebase();
+        const auth = firebaseServices.auth;
 
-      // Create Firebase user first
-      firebaseUser = await auth.createUser({
-        email: email,
-        password: password,
-        displayName: `${firstName} ${lastName}`,
-        disabled: false,
-        emailVerified: false
-      });
+        // Create Firebase user first
+        firebaseUser = await auth.createUser({
+          email: email,
+          password: password,
+          displayName: `${firstName} ${lastName}`,
+          disabled: false,
+          emailVerified: false
+        });
 
-      console.log(`✅ Firebase user created: ${firebaseUser.uid}`);
+        console.log(`✅ Firebase user created: ${firebaseUser.uid}`);
+      } catch (firebaseError) {
+        console.warn('⚠️  Firebase user creation failed, continuing with MongoDB-only registration:', firebaseError.message);
+        firebaseUser = null;
+      }
 
       // Create user object for MongoDB
       const userData = {
@@ -111,9 +116,13 @@ const register = async (req, res, next) => {
         password,
         username,
         firstName,
-        lastName,
-        firebaseUid: firebaseUser.uid // Link Firebase UID
+        lastName
       };
+      
+      // Add Firebase UID if Firebase user was created successfully
+      if (firebaseUser) {
+        userData.firebaseUid = firebaseUser.uid;
+      }
 
       // Add optional fields
       if (phone) userData.phone = phone;
@@ -125,12 +134,20 @@ const register = async (req, res, next) => {
 
       console.log(`✅ MongoDB user created: ${mongoUser.email} (${mongoUser.username})`);
 
-      // Set custom claims in Firebase for user role
-      await auth.setCustomUserClaims(firebaseUser.uid, {
-        role: mongoUser.role,
-        mongoId: mongoUser._id.toString(),
-        username: mongoUser.username
-      });
+      // Set custom claims in Firebase for user role (only if Firebase user was created)
+      if (firebaseUser) {
+        try {
+          const firebaseServices = initializeFirebase();
+          await firebaseServices.auth.setCustomUserClaims(firebaseUser.uid, {
+            role: mongoUser.role,
+            mongoId: mongoUser._id.toString(),
+            username: mongoUser.username
+          });
+          console.log(`✅ Firebase custom claims set for user: ${firebaseUser.uid}`);
+        } catch (claimsError) {
+          console.warn('⚠️  Failed to set Firebase custom claims:', claimsError.message);
+        }
+      }
 
       // Successfully created both Firebase and MongoDB users
       const user = mongoUser;
