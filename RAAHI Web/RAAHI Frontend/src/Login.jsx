@@ -7,7 +7,7 @@ const Login = () => {
   const [activeTab, setActiveTab] = useState('tourist');
   const [isLightMode, setIsLightMode] = useState(false);
   const [formData, setFormData] = useState({
-    tourist: { aadhaar: '', password: '' },
+    tourist: { email: '', password: '' },
     police: { pincode: '', password: '' },
     department: { state: '', password: '' }
   });
@@ -18,13 +18,11 @@ const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Add/remove light-mode class on body
-    if (isLightMode) {
-      document.body.classList.add('light-mode');
-    } else {
+    // Clean up any previous body classes on component mount and unmount
+    return () => {
       document.body.classList.remove('light-mode');
-    }
-  }, [isLightMode]);
+    };
+  }, []);
 
   const switchTab = (tabId) => {
     setActiveTab(tabId);
@@ -62,7 +60,7 @@ const Login = () => {
 
       // Add specific identifier based on user type
       if (userType === 'tourist') {
-        credentials.aadhaar = currentData.aadhaar;
+        credentials.email = currentData.email;
       } else if (userType === 'police') {
         credentials.pincode = currentData.pincode;
       } else if (userType === 'department') {
@@ -85,7 +83,7 @@ const Login = () => {
   };
 
   return (
-    <div className="login-page">
+    <div className={`login-page ${isLightMode ? 'light-mode' : ''}`}>
       <button className="mode-btn" onClick={toggleMode}>{isLightMode ? '☀️' : '🌙'}</button>
       <div className="login-container">
         <div className="tabs">
@@ -102,15 +100,14 @@ const Login = () => {
         <form id="tourist" className={`form ${activeTab === 'tourist' ? 'active' : ''}`} onSubmit={(e) => handleSubmit(e, 'tourist')}>
           <h2>Tourist Login</h2>
           <div className="input-group">
-            <label htmlFor="aadhaar">Aadhaar Number</label>
+            <label htmlFor="email">Email Address</label>
             <input 
-              type="text" 
-              id="aadhaar" 
-              placeholder="Enter Aadhaar Number" 
+              type="email" 
+              id="email" 
+              placeholder="Enter your email address" 
               required 
-              pattern="[0-9]{12}" 
-              value={formData.tourist.aadhaar}
-              onChange={(e) => handleInputChange('tourist', 'aadhaar', e.target.value)}
+              value={formData.tourist.email}
+              onChange={(e) => handleInputChange('tourist', 'email', e.target.value)}
               disabled={isSubmitting || isLoading}
             />
           </div>
@@ -129,6 +126,9 @@ const Login = () => {
           <button type="submit" className="login-btn" disabled={isSubmitting || isLoading}>
             {isSubmitting || isLoading ? 'Logging in...' : 'Login'}
           </button>
+          <p style={{ textAlign: 'center', marginTop: '1rem' }}>
+            Don't have an account? <a href="/register" style={{ color: '#4CAF50' }}>Register here</a>
+          </p>
         </form>
         <form id="police" className={`form ${activeTab === 'police' ? 'active' : ''}`} onSubmit={(e) => handleSubmit(e, 'police')}>
           <h2>Police Login</h2>

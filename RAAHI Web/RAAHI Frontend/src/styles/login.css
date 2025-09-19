@@ -1,21 +1,21 @@
-/* Reset */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* Login Page Specific Styles */
+.login-page {
   font-family: 'Segoe UI', sans-serif;
-}
-
-body {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+  width: 100%;
   overflow: hidden;
   background: linear-gradient(-45deg, #f5f2ee, #f0ebe4, #ebe5d8, #f5f2ee);
   background-size: 400% 400%;
   animation: gradientMove 15s ease infinite;
   transition: background 0.4s, color 0.4s;
+  position: relative;
+}
+
+.login-page * {
+  box-sizing: border-box;
 }
 
 @keyframes gradientMove {
@@ -24,21 +24,11 @@ body {
   100% { background-position: 0% 50%; }
 }
 
-body.light-mode {
+.login-page.light-mode {
   background: linear-gradient(-45deg, #f5f2ee, #f0ebe4, #ebe5d8, #f5f2ee);
   background-size: 400% 400%;
   animation: gradientMove 15s ease infinite;
   color: #5c4a3a;
-}
-
-/* Login Page Wrapper */
-.login-page {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  width: 100%;
-  position: relative;
 }
 
 /* Login Box */

@@ -1426,3 +1426,286 @@ html, body {
   color: #fff;
   border-radius: 10px 10px 10px 0;
 }
+
+/* Dashboard Styles */
+.dashboard-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.dashboard-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-header p {
+  color: var(--muted-foreground);
+  font-size: 1.125rem;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+@media (min-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Profile sections */
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.profile-section {
+  padding: 1rem;
+  background-color: var(--muted);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.profile-section h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.profile-section p {
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.profile-section p:last-child {
+  margin-bottom: 0;
+}
+
+.profile-section strong {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+/* Status indicators */
+.status {
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status.active {
+  background-color: hsl(120, 60%, 90%);
+  color: hsl(120, 60%, 30%);
+}
+
+.status.inactive {
+  background-color: hsl(0, 60%, 90%);
+  color: hsl(0, 60%, 30%);
+}
+
+.status.verified {
+  background-color: hsl(120, 60%, 90%);
+  color: hsl(120, 60%, 30%);
+}
+
+.status.unverified {
+  background-color: hsl(45, 60%, 90%);
+  color: hsl(45, 60%, 30%);
+}
+
+/* Travel preferences */
+.travel-preferences {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.preference-section p {
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+/* Activity history */
+.activity-history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.activity-item {
+  padding: 0.75rem;
+  background-color: var(--muted);
+  border-radius: var(--radius);
+  border-left: 3px solid var(--primary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.activity-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.activity-action {
+  font-weight: 600;
+  color: var(--primary);
+  text-transform: capitalize;
+  font-size: 0.875rem;
+}
+
+.activity-target {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  text-transform: capitalize;
+}
+
+.activity-time {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+.activity-rating {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Stats grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1rem;
+  background-color: var(--muted);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* Action buttons */
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .action-buttons {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+
+.action-buttons .btn {
+  flex: 1;
+  min-width: 0;
+  padding: 0.75rem 1rem;
+}
+
+/* Safety status */
+.safety-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.status-indicator {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: white;
+}
+
+.status-indicator.green {
+  background-color: hsl(120, 60%, 50%);
+}
+
+.status-indicator.yellow {
+  background-color: hsl(45, 95%, 50%);
+}
+
+.status-indicator.red {
+  background-color: hsl(0, 84%, 60%);
+}
+
+/* Enhanced card styles for dashboard */
+.dashboard-grid .card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.dashboard-grid .card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Link button styling */
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+}
+
+.btn-link:hover {
+  color: var(--primary);
+  text-decoration: none;
+}

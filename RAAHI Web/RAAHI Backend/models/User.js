@@ -7,7 +7,7 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     required: [true, 'Email is required'],
-    unique: true,
+    unique: false,
     lowercase: true,
     validate: [validator.isEmail, 'Please provide a valid email']
   },
@@ -16,14 +16,6 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Password is required'],
     minlength: 6,
     select: false // Don't include password in queries by default
-  },
-  username: {
-    type: String,
-    required: [true, 'Username is required'],
-    unique: true,
-    trim: true,
-    minlength: 3,
-    maxlength: 30
   },
   firstName: {
     type: String,
@@ -90,12 +82,18 @@ const userSchema = new mongoose.Schema({
     coordinates: {
       type: {
         type: String,
-        enum: ['Point'],
-        default: 'Point'
+        enum: ['Point']
       },
       coordinates: {
         type: [Number], // [longitude, latitude]
-        index: '2dsphere'
+        validate: {
+          validator: function(coords) {
+            return !coords || (Array.isArray(coords) && coords.length === 2 &&
+                   coords.every(coord => typeof coord === 'number' &&
+                   coord >= -180 && coord <= 180));
+          },
+          message: 'Coordinates must be an array of two numbers [longitude, latitude] between -180 and 180'
+        }
       }
     }
   },
@@ -159,16 +157,25 @@ const userSchema = new mongoose.Schema({
   }
 });
 
-// ✅ Fixed: removed duplicate indexes for email & username
-userSchema.index({ 'location.coordinates': '2dsphere' });
+// Indexes for geospatial queries and activity tracking
+userSchema.index({ 'location.coordinates': '2dsphere' }, { sparse: true });
 userSchema.index({ 'activityHistory.timestamp': -1 });
 
 // Pre-save middleware to hash password
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
 
-  this.password = await bcrypt.hash(this.password, 12);
-  next();
+  // Check if password exists and is not empty
+  if (!this.password || typeof this.password !== 'string' || this.password.trim() === '') {
+    return next(new Error('Password is required and must be a non-empty string'));
+  }
+
+  try {
+    this.password = await bcrypt.hash(this.password, 12);
+    next();
+  } catch (error) {
+    next(new Error(`Password hashing failed: ${error.message}`));
+  }
 });
 
 // Pre-save middleware to update updatedAt

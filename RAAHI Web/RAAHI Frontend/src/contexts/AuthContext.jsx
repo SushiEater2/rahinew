@@ -30,13 +30,23 @@ export const AuthProvider = ({ children }) => {
       const savedUser = localStorage.getItem('user');
 
       if (token && savedUser) {
-        // Verify token is still valid
-        try {
-          const userData = await apiService.users.getProfile();
+        const userData = JSON.parse(savedUser);
+        
+        // If it's a mock token, just restore the user state
+        if (token.startsWith('mock-jwt-token-')) {
           setUser(userData);
+          setIsAuthenticated(true);
+          return;
+        }
+        
+        // For real tokens, verify with backend
+        try {
+          const profileData = await apiService.users.getProfile();
+          setUser(profileData);
           setIsAuthenticated(true);
         } catch (error) {
           // Token is invalid, clear storage
+          console.warn('Token verification failed:', error.message);
           clearAuth();
         }
       }
@@ -51,24 +61,55 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       setIsLoading(true);
-      const response = await apiService.auth.login(credentials);
       
-      if (response.success && response.token) {
-        // Store token and user data
-        localStorage.setItem('authToken', response.token);
-        localStorage.setItem('user', JSON.stringify(response.user));
+      // Mock authentication for development (check for specific credentials)
+      if (credentials.email === 'anike@example.com' && credentials.password === 'asdfghjkl') {
+        const mockUser = {
+          id: '1',
+          email: 'anike@example.com',
+          fullName: 'Anike Kumar',
+          firstName: 'Anike',
+          lastName: 'Kumar',
+          phone: '+919876543210',
+          touristId: 'TID-2024-001',
+          userType: 'tourist',
+          role: 'user'
+        };
         
-        setUser(response.user);
+        // Store mock token and user data
+        localStorage.setItem('authToken', 'mock-jwt-token-' + Date.now());
+        localStorage.setItem('user', JSON.stringify(mockUser));
+        
+        setUser(mockUser);
         setIsAuthenticated(true);
         
-        return { success: true, user: response.user };
-      } else {
-        throw new Error(response.message || 'Login failed');
+        return { success: true, message: 'Login successful' };
       }
+      
+      // If not using mock credentials, try backend authentication
+      try {
+        const response = await apiService.auth.login(credentials);
+        
+        if (response.success && response.token) {
+          // Store backend JWT token and user data
+          localStorage.setItem('authToken', response.token);
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+          
+          setUser(response.data.user);
+          setIsAuthenticated(true);
+          
+          return { success: true, message: 'Login successful' };
+        } else {
+          return { success: false, error: response.error || 'Login failed' };
+        }
+      } catch (apiError) {
+        console.warn('Backend authentication failed:', apiError.message);
+        return { success: false, error: 'Invalid credentials' };
+      }
+      
     } catch (error) {
       console.error('Login error:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Login failed';
-      return { success: false, error: errorMessage };
+      return { success: false, error: 'Login failed' };
     } finally {
       setIsLoading(false);
     }
@@ -77,24 +118,58 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       setIsLoading(true);
-      const response = await apiService.auth.register(userData);
+      
+      const { fullName, touristData, ...otherData } = userData;
+      
+      // Parse fullName into firstName and lastName
+      const nameParts = fullName.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
+      // Prepare data according to backend User model structure
+      const backendData = {
+        email: userData.email,
+        password: userData.password,
+        firstName,
+        lastName,
+        phone: userData.phone
+      };
+
+      // Add location if provided in tourist data
+      if (touristData && touristData.nationality) {
+        backendData.location = {
+          country: touristData.nationality
+        };
+      }
+      
+      // Register with backend
+      const response = await apiService.auth.register(backendData);
       
       if (response.success) {
-        // Auto-login after successful registration if token is provided
+        console.log('✅ Registration successful');
+        
+        // Auto-login after successful registration
         if (response.token) {
           localStorage.setItem('authToken', response.token);
-          localStorage.setItem('user', JSON.stringify(response.user));
-          setUser(response.user);
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+          setUser(response.data.user);
           setIsAuthenticated(true);
         }
         
-        return { success: true, user: response.user };
+        return { 
+          success: true, 
+          user: response.data.user, 
+          message: 'Registration successful',
+          requiresVerification: !response.data.user.isEmailVerified
+        };
       } else {
-        throw new Error(response.message || 'Registration failed');
+        throw new Error(response.error || 'Registration failed');
       }
+      
     } catch (error) {
       console.error('Registration error:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Registration failed';
+      
+      const errorMessage = error.response?.data?.error || error.message || 'Registration failed';
       return { success: false, error: errorMessage };
     } finally {
       setIsLoading(false);
@@ -104,10 +179,19 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       // Call backend logout endpoint
-      await apiService.auth.logout();
+      try {
+        await apiService.auth.logout();
+      } catch (error) {
+        console.error('Backend logout error:', error);
+        // Continue with logout even if backend call fails
+      }
+      
+      // Clear local auth state
+      clearAuth();
+      
     } catch (error) {
       console.error('Logout error:', error);
-    } finally {
+      // Force clear auth state
       clearAuth();
     }
   };
@@ -142,7 +226,7 @@ export const AuthProvider = ({ children }) => {
     try {
       setIsLoading(true);
       const response = await apiService.auth.forgotPassword(email);
-      return { success: true, message: response.message };
+      return { success: true, message: response.message || 'Password reset email sent' };
     } catch (error) {
       console.error('Forgot password error:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Password reset failed';
@@ -156,7 +240,7 @@ export const AuthProvider = ({ children }) => {
     try {
       setIsLoading(true);
       const response = await apiService.auth.resetPassword(token, newPassword);
-      return { success: true, message: response.message };
+      return { success: true, message: response.message || 'Password reset successful' };
     } catch (error) {
       console.error('Reset password error:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Password reset failed';

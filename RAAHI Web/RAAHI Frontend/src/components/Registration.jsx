@@ -107,31 +107,43 @@ const Registration = () => {
     setErrors({});
     
     try {
-      // Prepare registration data
+      // Prepare registration data for backend
       const registrationData = {
         fullName: formData.fullName,
         email: formData.email,
         password: formData.password,
         phone: formData.phone,
-        idType: formData.idType,
-        idNumber: formData.idNumber,
-        dateOfBirth: formData.dob,
-        gender: formData.gender,
-        nationality: formData.nationality,
-        medicalConditions: formData.medical,
-        itinerary: itinerary,
-        emergencyContacts: emergency,
-        userType: 'tourist' // Default user type for registration
+        // Tourist-specific data
+        touristData: {
+          idType: formData.idType,
+          idNumber: formData.idNumber,
+          dateOfBirth: formData.dob,
+          gender: formData.gender,
+          nationality: formData.nationality,
+          medicalConditions: formData.medical,
+          itinerary: itinerary,
+          emergencyContacts: emergency
+        },
+        role: 'user', // Default user role
+        userType: 'tourist' // Tourist-specific type
       };
       
       const result = await register(registrationData);
       
       if (result.success) {
         setIsSuccessful(true);
-        // Optionally redirect after success
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 3000);
+        
+        if (result.requiresVerification) {
+          // Show verification message instead of auto-redirect
+          setErrors({ 
+            success: 'Registration successful! Please check your email for verification link before logging in.' 
+          });
+        } else {
+          // Auto-redirect after success
+          setTimeout(() => {
+            navigate('/dashboard');
+          }, 3000);
+        }
       } else {
         setErrors({ submit: result.error || 'Registration failed' });
       }
@@ -360,6 +372,9 @@ const Registration = () => {
             <div className="registration-header">
               <h1>Tourist Registration</h1>
               <p>Complete the steps to generate your digital Tourist ID.</p>
+              <p style={{ textAlign: 'center', marginTop: '1rem' }}>
+                Already have an account? <a href="/login" style={{ color: '#4CAF50' }}>Login here</a>
+              </p>
             </div>
             <div className="progress-bar">
               <div className="progress-fill" id="registration-progress"></div>
@@ -370,6 +385,11 @@ const Registration = () => {
                 {errors.submit && (
                   <div className="error-message" style={{ color: '#ff4444', textAlign: 'center', marginBottom: '1rem', padding: '0.5rem', backgroundColor: 'rgba(255, 68, 68, 0.1)', borderRadius: '4px' }}>
                     {errors.submit}
+                  </div>
+                )}
+                {errors.success && (
+                  <div className="success-message" style={{ color: '#22c55e', textAlign: 'center', marginBottom: '1rem', padding: '0.5rem', backgroundColor: 'rgba(34, 197, 94, 0.1)', borderRadius: '4px' }}>
+                    {errors.success}
                   </div>
                 )}
                 <div className="registration-nav">
