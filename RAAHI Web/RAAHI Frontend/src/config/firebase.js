@@ -3,7 +3,8 @@ import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
-// Firebase configuration from environment variables
+// Firebase configuration from environment variables or defaults
+// This configuration should match the shared firebase-config.json in the root
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAFM8gSCXm4Wu3OxeMWZKjUvg6aMevO-FE",
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "raahi-adf39.firebaseapp.com",
