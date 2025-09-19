@@ -19,6 +19,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color // Added import for Color
 import com.example.rahi2.navigation.NavRoute
 import com.example.rahi2.ui.strings.LocalStrings // Added import
 
@@ -57,7 +58,8 @@ fun MainShellScreen(
 					)
 				}
 			}
-		}
+		},
+        containerColor = Color.White // Set the dashboard background to white
 	) { inner ->
 		Box(modifier = Modifier.fillMaxSize().padding(inner)) {
 			content(inner)
