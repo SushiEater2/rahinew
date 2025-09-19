@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -11,12 +12,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddLocationAlt
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -41,6 +45,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.example.rahi2.GeofenceBroadcastReceiver
 import com.google.android.gms.location.Geofence
 import com.google.android.gms.location.GeofencingRequest
 import com.google.android.gms.location.LocationServices
@@ -62,11 +67,12 @@ import java.util.UUID
 fun MapTab() {
     val context = LocalContext.current
     var hasLocationPermission by remember { mutableStateOf(false) }
+    var hasBackgroundLocationPermission by remember { mutableStateOf(false) }
     var currentLocation by remember { mutableStateOf<LatLng?>(null) }
     var currentMapType by remember { mutableStateOf(MapType.NORMAL) }
     var showMapTypeSelector by remember { mutableStateOf(false) }
 
-    val geofencesList = remember { mutableStateListOf<Pair<LatLng, Float>>() } // To store center and radius for drawing
+    val geofencesList = remember { mutableStateListOf<Pair<LatLng, Float>>() }
     val geofencingClient = remember { LocationServices.getGeofencingClient(context) }
 
     val defaultIndiaLatLng = LatLng(20.5937, 78.9629)
@@ -80,20 +86,51 @@ fun MapTab() {
         mutableStateOf(MapProperties(mapType = currentMapType))
     }
 
-    val locationPermissionLauncher = rememberLauncherForActivityResult(
+    val fineLocationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
             if (isGranted) {
                 hasLocationPermission = true
             } else {
                 hasLocationPermission = false
+                Toast.makeText(context, "Fine location permission denied.", Toast.LENGTH_SHORT).show()
             }
         }
     )
 
+    val backgroundLocationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                hasBackgroundLocationPermission = true
+            } else {
+                hasBackgroundLocationPermission = false
+                Toast.makeText(context, "Background location permission denied. Geofences might not work in background.", Toast.LENGTH_LONG).show()
+            }
+        }
+    )
+
+    fun checkAndRequestPermissions() {
+        when {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED -> {
+                hasLocationPermission = true
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    when (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
+                        PackageManager.PERMISSION_GRANTED -> hasBackgroundLocationPermission = true
+                        else -> { /* Consider prompting for background permission */ }
+                    }
+                } else {
+                    hasBackgroundLocationPermission = true
+                }
+            }
+            else -> {
+                fineLocationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            }
+        }
+    }
+
     fun fetchCurrentLocation() {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            hasLocationPermission = true
+        if (hasLocationPermission) {
             fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, CancellationTokenSource().token)
                 .addOnSuccessListener { location ->
                     if (location != null) {
@@ -101,22 +138,16 @@ fun MapTab() {
                         cameraPositionState.position = CameraPosition.fromLatLngZoom(currentLocation!!, 15f)
                     }
                 }
-                .addOnFailureListener { /* Optionally log or inform user */ }
+                .addOnFailureListener { 
+                    Toast.makeText(context, "Failed to get current location.", Toast.LENGTH_SHORT).show()
+                }
         } else {
-            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            checkAndRequestPermissions()
         }
     }
 
     LaunchedEffect(Unit) {
-        when (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)) {
-            PackageManager.PERMISSION_GRANTED -> {
-                hasLocationPermission = true
-                fetchCurrentLocation()
-            }
-            else -> {
-                locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-            }
-        }
+        checkAndRequestPermissions()
     }
 
     LaunchedEffect(hasLocationPermission) {
@@ -125,16 +156,33 @@ fun MapTab() {
         }
     }
 
+    val geofencePendingIntent: PendingIntent by lazy {
+        val intent = Intent(context, GeofenceBroadcastReceiver::class.java)
+        PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
+    }
+
     val mapTypes = listOf(MapType.NORMAL, MapType.SATELLITE, MapType.TERRAIN, MapType.HYBRID)
 
     fun addGeofenceAtCurrentLocation() {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(context, "Location permission needed to add geofence.", Toast.LENGTH_SHORT).show()
+        if (!hasLocationPermission) {
+            Toast.makeText(context, "Fine Location permission needed to add geofence.", Toast.LENGTH_SHORT).show()
+            checkAndRequestPermissions()
             return
         }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !hasBackgroundLocationPermission) {
+             when (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
+                PackageManager.PERMISSION_GRANTED -> hasBackgroundLocationPermission = true
+                else -> backgroundLocationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+            }
+            if (!hasBackgroundLocationPermission) { 
+                 Toast.makeText(context, "Background location permission is recommended for geofences to work reliably.", Toast.LENGTH_LONG).show()
+            }
+        }
+
         currentLocation?.let { loc ->
             val geofenceId = UUID.randomUUID().toString()
-            val geofenceRadius = 100f // 100 meters
+            val geofenceRadius = 100f
 
             val geofence = Geofence.Builder()
                 .setRequestId(geofenceId)
@@ -148,35 +196,23 @@ fun MapTab() {
                 .addGeofence(geofence)
                 .build()
 
-            // --- Placeholder for PendingIntent ---
-            // To make this work, you need to create a BroadcastReceiver (e.g., GeofenceBroadcastReceiver.kt)
-            // and register it in your AndroidManifest.xml.
-            // You would also need to request ACCESS_BACKGROUND_LOCATION for geofences to trigger when the app is in the background.
-            /*
-            val intent = Intent(context, GeofenceBroadcastReceiver::class.java) // Replace GeofenceBroadcastReceiver with your actual receiver
-            val geofencePendingIntent = PendingIntent.getBroadcast(
-                context, 
-                0, 
-                intent, 
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
-            )
-
-            geofencingClient.addGeofences(geofencingRequest, geofencePendingIntent)?.run {
-                addOnSuccessListener {
-                    Toast.makeText(context, "Geofence added at current location!", Toast.LENGTH_SHORT).show()
-                    geofencesList.add(Pair(loc, geofenceRadius))
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                geofencingClient.addGeofences(geofencingRequest, geofencePendingIntent)?.run {
+                    addOnSuccessListener {
+                        Toast.makeText(context, "Geofence added at current location!", Toast.LENGTH_SHORT).show()
+                        geofencesList.add(Pair(loc, geofenceRadius))
+                    }
+                    addOnFailureListener { e ->
+                        Toast.makeText(context, "Failed to add geofence: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
                 }
-                addOnFailureListener {
-                    Toast.makeText(context, "Failed to add geofence.", Toast.LENGTH_SHORT).show()
-                }
+            } else {
+                 Toast.makeText(context, "Cannot add geofence without location permission.", Toast.LENGTH_SHORT).show()
             }
-            */
-            // For now, let's simulate success and add to list for visualization
-            Toast.makeText(context, "Geofence added (simulated) at current location!", Toast.LENGTH_SHORT).show()
-            geofencesList.add(Pair(loc, geofenceRadius))
 
         } ?: run {
             Toast.makeText(context, "Current location not available.", Toast.LENGTH_SHORT).show()
+            if (!hasLocationPermission) fetchCurrentLocation()
         }
     }
 
@@ -219,8 +255,14 @@ fun MapTab() {
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodyLarge
                 )
-                Button(onClick = { locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) }) {
-                    Text("Grant Permission")
+                Button(onClick = { fineLocationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) }) {
+                    Text("Grant Fine Location Permission")
+                }
+                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(onClick = { backgroundLocationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION) }) {
+                        Text("Grant Background Location (Recommended)")
+                    }
                 }
             }
         }
@@ -268,15 +310,27 @@ fun MapTab() {
             }
         }
 
-        // FAB to Add Geofence (Bottom Right)
-        FloatingActionButton(
-            onClick = { addGeofenceAtCurrentLocation() },
+        // FABs Column (Bottom Left)
+        Column(
             modifier = Modifier
-                .align(Alignment.BottomEnd)
+                .align(Alignment.BottomStart)
                 .padding(16.dp),
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+            horizontalAlignment = Alignment.CenterHorizontally, // Or Start if you prefer FABs left-aligned in column
+            verticalArrangement = Arrangement.spacedBy(8.dp) // Spacing between FABs
         ) {
-            Icon(Icons.Filled.AddLocationAlt, "Add Geofence")
+            FloatingActionButton(
+                onClick = { addGeofenceAtCurrentLocation() },
+                containerColor = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Icon(Icons.Filled.AddLocationAlt, "Add Geofence")
+            }
+
+            FloatingActionButton(
+                onClick = { fetchCurrentLocation() },
+                containerColor = MaterialTheme.colorScheme.secondaryContainer
+            ) {
+                Icon(Icons.Filled.MyLocation, "Center on my location")
+            }
         }
     }
 }

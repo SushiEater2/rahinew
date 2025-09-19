@@ -27,8 +27,24 @@ data class AppStrings(
 	val authWelcome: String,
 	val authLogin: String,
 	val authSignup: String,
-	val homeTabLabel: String, // Added
-	val profileTabLabel: String // Added
+	val homeTabLabel: String,
+	val profileTabLabel: String,
+
+	// SOS Feature Strings
+	val sosDialogTitle: String,
+	val sosDialogMessage: String,
+	val sosDialogConfirm: String,
+	val sosDialogCancel: String,
+	val sosSmsMessagePrefix: String,
+	val sosSmsMessageNoLocation: String,
+	val sosSmsSent: String,
+	val sosSmsFailed: String,
+	val sosSmsPermissionDenied: String,
+	val sosLocationPermissionDeniedForSms: String,
+	val sosFetchingLocation: String,
+	val sosLocationSuccess: String,
+	val sosLocationFailed: String,
+	val sosCallingEmergencyServices: String
 )
 
 val EnglishStrings = AppStrings(
@@ -54,8 +70,24 @@ val EnglishStrings = AppStrings(
 	authWelcome = "Welcome",
 	authLogin = "Login",
 	authSignup = "Sign Up",
-	homeTabLabel = "Home", // Added
-	profileTabLabel = "Profile" // Added
+	homeTabLabel = "Home",
+	profileTabLabel = "Profile",
+
+	// SOS Feature Strings - English
+	sosDialogTitle = "Emergency SOS",
+	sosDialogMessage = "This will attempt to send your location to an emergency contact and then call emergency services (112). Are you sure?",
+	sosDialogConfirm = "Proceed with SOS",
+	sosDialogCancel = "Cancel",
+	sosSmsMessagePrefix = "SOS! I need help. My current location is:",
+	sosSmsMessageNoLocation = "SOS! I need help. Unable to get current location.",
+	sosSmsSent = "SMS sent to emergency contact.",
+	sosSmsFailed = "Failed to send SMS",
+	sosSmsPermissionDenied = "SMS permission denied. Cannot send SMS.",
+	sosLocationPermissionDeniedForSms = "Location permission denied. Proceeding without location for SMS.",
+	sosFetchingLocation = "Fetching location for SOS…",
+	sosLocationSuccess = "Location fetched.",
+	sosLocationFailed = "Could not get location",
+	sosCallingEmergencyServices = "Calling emergency services…"
 )
 
 val HindiStrings = AppStrings(
@@ -81,8 +113,24 @@ val HindiStrings = AppStrings(
 	authWelcome = "स्वागत है",
 	authLogin = "लॉगिन",
 	authSignup = "साइन अप",
-	homeTabLabel = "होम", // Added
-	profileTabLabel = "प्रोफ़ाइल" // Added
+	homeTabLabel = "होम",
+	profileTabLabel = "प्रोफ़ाइल",
+
+	// SOS Feature Strings - Hindi (using English as placeholders - PLEASE TRANSLATE)
+	sosDialogTitle = "Emergency SOS", // Needs Hindi translation
+	sosDialogMessage = "This will attempt to send your location to an emergency contact and then call emergency services (112). Are you sure?", // Needs Hindi translation
+	sosDialogConfirm = "Proceed with SOS", // Needs Hindi translation
+	sosDialogCancel = "Cancel", // Needs Hindi translation
+	sosSmsMessagePrefix = "SOS! I need help. My current location is:", // Needs Hindi translation
+	sosSmsMessageNoLocation = "SOS! I need help. Unable to get current location.", // Needs Hindi translation
+	sosSmsSent = "SMS sent to emergency contact.", // Needs Hindi translation
+	sosSmsFailed = "Failed to send SMS", // Needs Hindi translation
+	sosSmsPermissionDenied = "SMS permission denied. Cannot send SMS.", // Needs Hindi translation
+	sosLocationPermissionDeniedForSms = "Location permission denied. Proceeding without location for SMS.", // Needs Hindi translation
+	sosFetchingLocation = "Fetching location for SOS…", // Needs Hindi translation
+	sosLocationSuccess = "Location fetched.", // Needs Hindi translation
+	sosLocationFailed = "Could not get location", // Needs Hindi translation
+	sosCallingEmergencyServices = "Calling emergency services…" // Needs Hindi translation
 )
 
 val LocalStrings = compositionLocalOf { EnglishStrings }

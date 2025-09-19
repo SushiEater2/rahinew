@@ -41,16 +41,17 @@ android {
 }
 
 dependencies {
-    implementation(platform("androidx.compose:compose-bom:2024.09.00")) // Or your chosen BoM
+    implementation("com.google.maps.android:android-maps-utils:3.19.0")
+    implementation(platform("androidx.compose:compose-bom:2025.09.00")) // Or your chosen BoM
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
-    implementation("androidx.navigation:navigation-compose:2.8.3") // Or latest
-    implementation("com.google.maps.android:maps-compose:6.1.0") // Or latest maps-compose
+    implementation("androidx.navigation:navigation-compose:2.9.4") // Or latest
+    implementation("com.google.maps.android:maps-compose:6.10.0") // Or latest maps-compose
     implementation("com.google.android.gms:play-services-maps:19.2.0") // Or latest play-services-maps
 
     // If you need user's current location:
     implementation("com.google.android.gms:play-services-location:21.3.0") // Or latest
-    implementation("androidx.compose.ui:ui:1.9.0") // Ensure you have base compose UI
+    implementation("androidx.compose.ui:ui:1.9.1") // Ensure you have base compose UI
     implementation("com.google.maps.android:maps-compose:6.10.0") // Google Maps Compose Library
     implementation("com.google.android.gms:play-services-maps:19.2.0") // Google Play Services for Maps
     implementation("com.google.android.gms:play-services-location:21.3.0") // Google Play Services for Location

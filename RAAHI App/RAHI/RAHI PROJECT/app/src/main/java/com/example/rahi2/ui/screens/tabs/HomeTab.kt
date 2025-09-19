@@ -1,6 +1,5 @@
 package com.example.rahi2.ui.screens.tabs
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,15 +27,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-// import androidx.compose.ui.graphics.Brush // No longer needed for Column background
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.rahi2.ui.strings.LocalStrings
 
 @Composable
-fun HomeTab(onReportIncident: () -> Unit, onOpenMap: () -> Unit) {
-	val context = LocalContext.current
+fun HomeTab(
+    onReportIncident: () -> Unit, 
+    onOpenMap: () -> Unit,
+    onNavigateToSosDetails: () -> Unit // New navigation lambda
+) {
+	val context = LocalContext.current // Still needed for LocalStrings
+    val currentStrings = LocalStrings.current
+
 	val sosAccentColor = Color(0xFFFF3D00)
 	val mapAccentColor = Color(0xFF42A5F5)
 	val reportAccentColor = Color(0xFF66BB6A)
@@ -44,7 +48,7 @@ fun HomeTab(onReportIncident: () -> Unit, onOpenMap: () -> Unit) {
 	Column(
 		modifier = Modifier
 			.fillMaxSize()
-			.background(Color.White) // Main background is white
+			.background(Color.White)
 			.padding(16.dp),
 		horizontalAlignment = Alignment.CenterHorizontally,
 		verticalArrangement = Arrangement.Top
@@ -56,7 +60,7 @@ fun HomeTab(onReportIncident: () -> Unit, onOpenMap: () -> Unit) {
 		) {
 			Icon(Icons.Default.VerifiedUser, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
 			Text(
-				text = LocalStrings.current.appTitle,
+				text = currentStrings.appTitle,
 				style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground),
 				modifier = Modifier.padding(start = 8.dp)
 			)
@@ -64,24 +68,21 @@ fun HomeTab(onReportIncident: () -> Unit, onOpenMap: () -> Unit) {
 		Spacer(modifier = Modifier.height(16.dp))
 
 		FeatureCard(
-			title = LocalStrings.current.homeSOS,
+			title = currentStrings.homeSOS,
 			accentColor = sosAccentColor,
 			icon = { Icon(Icons.Default.Sos, contentDescription = null, tint = sosAccentColor, modifier = Modifier.size(36.dp)) },
-			onClick = {
-				val intent = android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:112"))
-				context.startActivity(intent)
-			}
+			onClick = onNavigateToSosDetails // Updated onClick
 		)
 		Spacer(modifier = Modifier.height(12.dp))
 		FeatureCard(
-			title = LocalStrings.current.homeMap,
+			title = currentStrings.homeMap,
 			accentColor = mapAccentColor,
 			icon = { Icon(Icons.Default.Map, contentDescription = null, tint = mapAccentColor, modifier = Modifier.size(36.dp)) },
 			onClick = onOpenMap
 		)
 		Spacer(modifier = Modifier.height(12.dp))
 		FeatureCard(
-			title = LocalStrings.current.homeReportIncident,
+			title = currentStrings.homeReportIncident,
 			accentColor = reportAccentColor,
 			icon = { Icon(Icons.Default.Report, contentDescription = null, tint = reportAccentColor, modifier = Modifier.size(36.dp)) },
 			onClick = onReportIncident
@@ -103,12 +104,11 @@ private fun FeatureCard(
 			.fillMaxWidth()
 			.height(100.dp)
 			.clickable { onClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp) // Adding a subtle elevation
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
 	) {
 		Row(
 			modifier = Modifier
 				.fillMaxSize()
-				// Removed Row background, Card now handles it
 				.padding(16.dp),
 			verticalAlignment = Alignment.CenterVertically,
 			horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -116,10 +116,10 @@ private fun FeatureCard(
 			Box(
 				modifier = Modifier
 					.size(56.dp)
-					.background(accentColor.copy(alpha = 0.1f), shape = RoundedCornerShape(12.dp)), // Icon background with light accent tint
+					.background(accentColor.copy(alpha = 0.1f), shape = RoundedCornerShape(12.dp)),
 				contentAlignment = Alignment.Center
-			) { icon() } // Icon is now tinted by the caller
-			Text(title, style = MaterialTheme.typography.titleLarge, color = accentColor) // Text color is accent color
+			) { icon() }
+			Text(title, style = MaterialTheme.typography.titleLarge, color = accentColor)
 		}
 	}
 }
