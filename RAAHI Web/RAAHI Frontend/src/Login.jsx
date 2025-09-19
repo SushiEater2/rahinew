@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
-import './styles/login.css';
 
 const Login = () => {
   const [activeTab, setActiveTab] = useState('tourist');
