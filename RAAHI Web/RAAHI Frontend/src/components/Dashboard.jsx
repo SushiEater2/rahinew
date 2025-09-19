@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import apiService from '../services/api';
+import GoogleMap from './GoogleMap';
 import '../styles/modern-dashboard.css';
 
 const Dashboard = () => {
@@ -13,6 +14,7 @@ const Dashboard = () => {
   const [currentLocation, setCurrentLocation] = useState('India Gate, New Delhi');
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [mapLocation, setMapLocation] = useState(null);
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -80,6 +82,13 @@ const Dashboard = () => {
   const handleLogout = async () => {
     await logout();
     navigate('/login.html');
+  };
+
+  const handleLocationUpdate = (locationData) => {
+    setMapLocation(locationData);
+    setCurrentLocation(locationData.address || 'Current Location');
+    // You can also update safety score based on location
+    // This is where you'd call your safety API
   };
 
   if (isLoading) {
@@ -409,7 +418,7 @@ const Dashboard = () => {
             {activeTab === 'map' && (
               <div className="map-tab">
                 <div className="map-safety-grid">
-                  {/* Interactive Map Section */}
+                  {/* Google Maps Section */}
                   <div className="interactive-map-section">
                     <div className="map-header">
                       <h3>Interactive Safety Map</h3>
@@ -430,76 +439,33 @@ const Dashboard = () => {
                     </div>
                     
                     <div className="map-container">
-                      <div className="interactive-map">
-                        {/* Map Areas - Clickable zones */}
-                        <div 
-                          className="map-area safe-area" 
-                          onClick={() => { setSafetyScore(92); setCurrentLocation('Connaught Place, New Delhi'); }}
-                          title="Connaught Place - Very Safe"
-                        >
-                          <div className="area-label">Connaught Place</div>
-                          <div className="safety-indicator safe">92</div>
-                        </div>
-                        
-                        <div 
-                          className="map-area moderate-area" 
-                          onClick={() => { setSafetyScore(68); setCurrentLocation('Karol Bagh, New Delhi'); }}
-                          title="Karol Bagh - Moderate Safety"
-                        >
-                          <div className="area-label">Karol Bagh</div>
-                          <div className="safety-indicator moderate">68</div>
-                        </div>
-                        
-                        <div 
-                          className="map-area safe-area current-area" 
-                          onClick={() => { setSafetyScore(85); setCurrentLocation('India Gate, New Delhi'); }}
-                          title="India Gate - Safe (Your Location)"
-                        >
-                          <div className="area-label">India Gate</div>
-                          <div className="safety-indicator safe">85</div>
-                          <div className="current-location-pin">📍</div>
-                        </div>
-                        
-                        <div 
-                          className="map-area risky-area" 
-                          onClick={() => { setSafetyScore(42); setCurrentLocation('Old Delhi, New Delhi'); }}
-                          title="Old Delhi - High Risk"
-                        >
-                          <div className="area-label">Old Delhi</div>
-                          <div className="safety-indicator risky">42</div>
-                        </div>
-                        
-                        <div 
-                          className="map-area safe-area" 
-                          onClick={() => { setSafetyScore(88); setCurrentLocation('Dwarka, New Delhi'); }}
-                          title="Dwarka - Very Safe"
-                        >
-                          <div className="area-label">Dwarka</div>
-                          <div className="safety-indicator safe">88</div>
-                        </div>
-                        
-                        <div 
-                          className="map-area moderate-area" 
-                          onClick={() => { setSafetyScore(73); setCurrentLocation('Lajpat Nagar, New Delhi'); }}
-                          title="Lajpat Nagar - Moderate Safety"
-                        >
-                          <div className="area-label">Lajpat Nagar</div>
-                          <div className="safety-indicator moderate">73</div>
-                        </div>
-                      </div>
+                      <GoogleMap 
+                        onLocationUpdate={handleLocationUpdate}
+                        safetyData={[]} // You can pass safety data from your backend
+                        emergencyServices={[]} // Pass emergency services data
+                        touristAttractions={[]} // Pass tourist attractions data
+                      />
                       
-                      <div className="map-legend">
+                      <div className="map-legend" style={{ marginTop: '20px' }}>
                         <div className="legend-item">
-                          <div className="legend-color safe"></div>
+                          <div className="legend-color safe" style={{ backgroundColor: '#10b981' }}></div>
                           <span>Safe Zones (80+)</span>
                         </div>
                         <div className="legend-item">
-                          <div className="legend-color moderate"></div>
+                          <div className="legend-color moderate" style={{ backgroundColor: '#f59e0b' }}></div>
                           <span>Moderate Risk (50-79)</span>
                         </div>
                         <div className="legend-item">
-                          <div className="legend-color risky"></div>
+                          <div className="legend-color risky" style={{ backgroundColor: '#ef4444' }}></div>
                           <span>High Risk (0-49)</span>
+                        </div>
+                        <div className="legend-item">
+                          <div className="legend-color" style={{ backgroundColor: '#007bff' }}></div>
+                          <span>Tourist Attractions</span>
+                        </div>
+                        <div className="legend-item">
+                          <div className="legend-color" style={{ backgroundColor: '#ff4444' }}></div>
+                          <span>Emergency Services</span>
                         </div>
                       </div>
                     </div>
