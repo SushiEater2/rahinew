@@ -29,7 +29,6 @@ const createTokenResponse = (user, statusCode, res, message = 'Success') => {
     data: {
       user: {
         id: user._id,
-        username: user.username,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
@@ -57,7 +56,6 @@ const register = async (req, res, next) => {
     const {
       email,
       password,
-      username,
       firstName,
       lastName,
       phone,
@@ -65,26 +63,16 @@ const register = async (req, res, next) => {
       location
     } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({
-      $or: [{ email }, { username }]
-    });
+    // Check if user already exists by email
+    const existingUser = await User.findOne({ email });
 
     if (existingUser) {
-      if (existingUser.email === email) {
-        return res.status(400).json({
-          success: false,
-          error: 'A user with this email already exists'
-        });
-      }
-      
-      if (existingUser.username === username) {
-        return res.status(400).json({
-          success: false,
-          error: 'Username is already taken'
-        });
-      }
+      return res.status(400).json({
+        success: false,
+        error: 'A user with this email already exists'
+      });
     }
+
 
     let firebaseUser = null;
     let mongoUser = null;
@@ -114,7 +102,6 @@ const register = async (req, res, next) => {
       const userData = {
         email,
         password,
-        username,
         firstName,
         lastName
       };
@@ -132,7 +119,7 @@ const register = async (req, res, next) => {
       // Create MongoDB user
       mongoUser = await User.create(userData);
 
-      console.log(`✅ MongoDB user created: ${mongoUser.email} (${mongoUser.username})`);
+      console.log(`✅ MongoDB user created: ${mongoUser.email}`);
 
       // Set custom claims in Firebase for user role (only if Firebase user was created)
       if (firebaseUser) {
@@ -140,8 +127,7 @@ const register = async (req, res, next) => {
           const firebaseServices = initializeFirebase();
           await firebaseServices.auth.setCustomUserClaims(firebaseUser.uid, {
             role: mongoUser.role,
-            mongoId: mongoUser._id.toString(),
-            username: mongoUser.username
+            mongoId: mongoUser._id.toString()
           });
           console.log(`✅ Firebase custom claims set for user: ${firebaseUser.uid}`);
         } catch (claimsError) {
@@ -153,7 +139,7 @@ const register = async (req, res, next) => {
       const user = mongoUser;
       
       // Log user creation
-      console.log(`✅ New user registered: ${user.email} (${user.username})`);
+      console.log(`✅ New user registered: ${user.email}`);
 
       createTokenResponse(user, 201, res, 'User registered successfully');
       
@@ -226,7 +212,7 @@ const login = async (req, res, next) => {
       });
     }
 
-    console.log(`✅ User logged in: ${user.email} (${user.username})`);
+    console.log(`✅ User logged in: ${user.email}`);
 
     createTokenResponse(user, 200, res, 'Logged in successfully');
 
@@ -248,7 +234,6 @@ const getMe = async (req, res, next) => {
       data: {
         user: {
           id: user._id,
-          username: user.username,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
@@ -319,7 +304,6 @@ const updateProfile = async (req, res, next) => {
       data: {
         user: {
           id: user._id,
-          username: user.username,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
@@ -472,7 +456,7 @@ const verifyFirebaseToken = async (req, res, next) => {
       });
     }
 
-    console.log(`✅ Firebase user verified: ${user.email} (${user.username})`);
+    console.log(`✅ Firebase user verified: ${user.email}`);
 
     createTokenResponse(user, 200, res, 'Firebase authentication successful');
 

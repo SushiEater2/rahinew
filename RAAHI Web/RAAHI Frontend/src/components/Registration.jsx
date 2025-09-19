@@ -372,6 +372,9 @@ const Registration = () => {
             <div className="registration-header">
               <h1>Tourist Registration</h1>
               <p>Complete the steps to generate your digital Tourist ID.</p>
+              <p style={{ textAlign: 'center', marginTop: '1rem' }}>
+                Already have an account? <a href="/login" style={{ color: '#4CAF50' }}>Login here</a>
+              </p>
             </div>
             <div className="progress-bar">
               <div className="progress-fill" id="registration-progress"></div>

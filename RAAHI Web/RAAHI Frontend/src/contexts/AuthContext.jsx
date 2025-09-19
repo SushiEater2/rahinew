@@ -119,26 +119,49 @@ export const AuthProvider = ({ children }) => {
     try {
       setIsLoading(true);
       
-      const { fullName, ...otherData } = userData;
+      const { fullName, touristData, ...otherData } = userData;
       
       // Parse fullName into firstName and lastName
       const nameParts = fullName.split(' ');
       const firstName = nameParts[0] || '';
       const lastName = nameParts.slice(1).join(' ') || '';
       
+      // Prepare data according to backend User model structure
       const backendData = {
-        ...otherData,
-        username: userData.email.split('@')[0], // Use email prefix as username
+        email: userData.email,
+        password: userData.password,
         firstName,
-        lastName
+        lastName,
+        phone: userData.phone
       };
+
+      // Add location if provided in tourist data
+      if (touristData && touristData.nationality) {
+        backendData.location = {
+          country: touristData.nationality
+        };
+      }
       
-      // Register with backend only
+      // Register with backend
       const response = await apiService.auth.register(backendData);
       
       if (response.success) {
         console.log('✅ Registration successful');
-        return { success: true, user: response.data.user, message: 'Registration successful' };
+        
+        // Auto-login after successful registration
+        if (response.token) {
+          localStorage.setItem('authToken', response.token);
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+          setUser(response.data.user);
+          setIsAuthenticated(true);
+        }
+        
+        return { 
+          success: true, 
+          user: response.data.user, 
+          message: 'Registration successful',
+          requiresVerification: !response.data.user.isEmailVerified
+        };
       } else {
         throw new Error(response.error || 'Registration failed');
       }

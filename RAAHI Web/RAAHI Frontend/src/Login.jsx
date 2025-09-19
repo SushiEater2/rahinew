@@ -126,6 +126,9 @@ const Login = () => {
           <button type="submit" className="login-btn" disabled={isSubmitting || isLoading}>
             {isSubmitting || isLoading ? 'Logging in...' : 'Login'}
           </button>
+          <p style={{ textAlign: 'center', marginTop: '1rem' }}>
+            Don't have an account? <a href="/register" style={{ color: '#4CAF50' }}>Register here</a>
+          </p>
         </form>
         <form id="police" className={`form ${activeTab === 'police' ? 'active' : ''}`} onSubmit={(e) => handleSubmit(e, 'police')}>
           <h2>Police Login</h2>

@@ -9,9 +9,9 @@ const validateEmail = (email) => {
 
 const validatePassword = (password) => {
   if (!password) return 'Password is required';
+  if (typeof password !== 'string') return 'Password must be a string';
   if (password.length < 6) return 'Password must be at least 6 characters long';
   if (password.length > 128) return 'Password must not exceed 128 characters';
-  if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(password)) return 'Password must contain at least one letter and one number';
   return null;
 };
 
@@ -40,16 +40,13 @@ const validatePhone = (phone) => {
 // Middleware
 const validateRegistration = (req, res, next) => {
   const errors = [];
-  const { email, password, username, firstName, lastName, phone } = req.body;
+  const { email, password, firstName, lastName, phone } = req.body;
 
   const emailError = validateEmail(email);
   if (emailError) errors.push(emailError);
 
   const passwordError = validatePassword(password);
   if (passwordError) errors.push(passwordError);
-
-  const usernameError = validateUsername(username);
-  if (usernameError) errors.push(usernameError);
 
   const firstNameError = validateName(firstName, 'First name');
   if (firstNameError) errors.push(firstNameError);
@@ -66,7 +63,6 @@ const validateRegistration = (req, res, next) => {
 
   // Sanitize
   req.body.email = validator.normalizeEmail(email);
-  req.body.username = username.trim().toLowerCase();
   req.body.firstName = firstName.trim();
   req.body.lastName = lastName.trim();
   if (phone) req.body.phone = phone.trim();

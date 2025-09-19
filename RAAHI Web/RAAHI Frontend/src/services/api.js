@@ -81,7 +81,7 @@ const apiService = {
   // User endpoints
   users: {
     getProfile: async () => {
-      const response = await api.get('/users/profile');
+      const response = await api.get('/auth/me');
       return response.data;
     },
     updateProfile: async (userData) => {
