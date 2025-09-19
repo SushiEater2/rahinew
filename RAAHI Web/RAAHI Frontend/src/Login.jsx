@@ -11,6 +11,11 @@ const Login = () => {
     police: { pincode: '', password: '' },
     department: { state: '', password: '' }
   });
+  const [showPassword, setShowPassword] = useState({
+    tourist: false,
+    police: false,
+    department: false
+  });
   const [errors, setErrors] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -44,6 +49,13 @@ const Login = () => {
     if (errors) setErrors('');
   };
 
+  const togglePasswordVisibility = (tab) => {
+    setShowPassword(prev => ({
+      ...prev,
+      [tab]: !prev[tab]
+    }));
+  };
+
   const handleSubmit = async (e, userType) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -67,11 +79,26 @@ const Login = () => {
         credentials.state = currentData.state;
       }
 
+      // Check for department admin access first
+      if (userType === 'department' && currentData.password === 'admin123') {
+        // Direct access to admin dashboard for department users
+        console.log('🚨 Department admin login successful');
+        localStorage.setItem('authToken', 'admin-dept-token');
+        localStorage.setItem('userType', 'department');
+        localStorage.setItem('userState', currentData.state);
+        window.location.href = '#emergency-dashboard';
+        return;
+      }
+      
       const result = await login(credentials);
       
       if (result.success) {
-        // Redirect to dashboard on successful login
-        navigate('/dashboard');
+        // Redirect based on user type
+        if (result.userType === 'department') {
+          window.location.href = '#emergency-dashboard';
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         setErrors(result.error || 'Login failed');
       }
@@ -113,15 +140,26 @@ const Login = () => {
           </div>
           <div className="input-group">
             <label htmlFor="t-password">Password</label>
-            <input 
-              type="password" 
-              id="t-password" 
-              placeholder="Enter Password" 
-              required 
-              value={formData.tourist.password}
-              onChange={(e) => handleInputChange('tourist', 'password', e.target.value)}
-              disabled={isSubmitting || isLoading}
-            />
+            <div className="password-input-container">
+              <input 
+                type={showPassword.tourist ? "text" : "password"} 
+                id="t-password" 
+                placeholder="Enter Password" 
+                required 
+                value={formData.tourist.password}
+                onChange={(e) => handleInputChange('tourist', 'password', e.target.value)}
+                disabled={isSubmitting || isLoading}
+              />
+              <button 
+                type="button" 
+                className="password-toggle-btn"
+                onClick={() => togglePasswordVisibility('tourist')}
+                disabled={isSubmitting || isLoading}
+                aria-label="Toggle password visibility"
+              >
+                {showPassword.tourist ? '🙈' : '👁️'}
+              </button>
+            </div>
           </div>
           <button type="submit" className="login-btn" disabled={isSubmitting || isLoading}>
             {isSubmitting || isLoading ? 'Logging in...' : 'Login'}
@@ -147,15 +185,26 @@ const Login = () => {
           </div>
           <div className="input-group">
             <label htmlFor="p-password">Password</label>
-            <input 
-              type="password" 
-              id="p-password" 
-              placeholder="Enter Password" 
-              required 
-              value={formData.police.password}
-              onChange={(e) => handleInputChange('police', 'password', e.target.value)}
-              disabled={isSubmitting || isLoading}
-            />
+            <div className="password-input-container">
+              <input 
+                type={showPassword.police ? "text" : "password"} 
+                id="p-password" 
+                placeholder="Enter Password" 
+                required 
+                value={formData.police.password}
+                onChange={(e) => handleInputChange('police', 'password', e.target.value)}
+                disabled={isSubmitting || isLoading}
+              />
+              <button 
+                type="button" 
+                className="password-toggle-btn"
+                onClick={() => togglePasswordVisibility('police')}
+                disabled={isSubmitting || isLoading}
+                aria-label="Toggle password visibility"
+              >
+                {showPassword.police ? '🙈' : '👁️'}
+              </button>
+            </div>
           </div>
           <button type="submit" className="login-btn" disabled={isSubmitting || isLoading}>
             {isSubmitting || isLoading ? 'Logging in...' : 'Login'}
@@ -205,15 +254,26 @@ const Login = () => {
           </div>
           <div className="input-group">
             <label htmlFor="d-password">Password</label>
-            <input 
-              type="password" 
-              id="d-password" 
-              placeholder="Enter Password" 
-              required 
-              value={formData.department.password}
-              onChange={(e) => handleInputChange('department', 'password', e.target.value)}
-              disabled={isSubmitting || isLoading}
-            />
+            <div className="password-input-container">
+              <input 
+                type={showPassword.department ? "text" : "password"} 
+                id="d-password" 
+                placeholder="Enter Password" 
+                required 
+                value={formData.department.password}
+                onChange={(e) => handleInputChange('department', 'password', e.target.value)}
+                disabled={isSubmitting || isLoading}
+              />
+              <button 
+                type="button" 
+                className="password-toggle-btn"
+                onClick={() => togglePasswordVisibility('department')}
+                disabled={isSubmitting || isLoading}
+                aria-label="Toggle password visibility"
+              >
+                {showPassword.department ? '🙈' : '👁️'}
+              </button>
+            </div>
           </div>
           <button type="submit" className="login-btn" disabled={isSubmitting || isLoading}>
             {isSubmitting || isLoading ? 'Logging in...' : 'Login'}

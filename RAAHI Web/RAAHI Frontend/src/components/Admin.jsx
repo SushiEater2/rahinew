@@ -26,6 +26,13 @@ const Admin = () => {
               <div className="admin-links">
                 <a href="#" className="link">Forgot Password?</a>
                 <a href="#" className="link">Request Access</a>
+                <button 
+                  className="btn btn-secondary" 
+                  style={{marginTop: '10px', width: '100%'}}
+                  onClick={() => window.location.hash = '#emergency-dashboard'}
+                >
+                  🚨 Emergency Dashboard (Demo)
+                </button>
               </div>
             </div>
           </div>

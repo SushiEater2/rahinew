@@ -1,37 +1,37 @@
-/* CSS Variables - Cream & Brown Theme */
+/* CSS Variables - White & Blue Theme */
 :root {
-  /* Backgrounds - Warm cream tones */
-  --background: hsl(45, 25%, 96%); /* Lightest cream background */
-  --foreground: hsl(30, 15%, 25%); /* Dark brown text */
+  /* Backgrounds - Clean white tones */
+  --background: hsl(0, 0%, 100%); /* Pure white background */
+  --foreground: hsl(222, 84%, 5%); /* Very dark text */
 
-  --card: hsl(48, 20%, 94%); /* Cream cards */
-  --card-foreground: hsl(30, 15%, 25%);
+  --card: hsl(0, 0%, 100%); /* White cards */
+  --card-foreground: hsl(222, 84%, 5%);
 
-  --popover: hsl(48, 20%, 94%);
-  --popover-foreground: hsl(30, 15%, 25%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(222, 84%, 5%);
 
-  /* Primary - Rich brown */
-  --primary: hsl(25, 40%, 35%); /* Good brown shade */
-  --primary-foreground: hsl(45, 25%, 96%);
-  --primary-hover: hsl(25, 40%, 30%);
+  /* Primary - Blue theme */
+  --primary: hsl(221, 83%, 53%); /* Bright blue */
+  --primary-foreground: hsl(0, 0%, 100%);
+  --primary-hover: hsl(221, 83%, 48%);
 
-  /* Secondary - Warm neutrals */
-  --secondary: hsl(40, 15%, 88%); /* Light warm gray */
-  --secondary-foreground: hsl(30, 15%, 25%);
+  /* Secondary - Light blue/gray */
+  --secondary: hsl(210, 40%, 95%); /* Very light blue */
+  --secondary-foreground: hsl(222, 84%, 5%);
 
-  --muted: hsl(42, 12%, 92%); /* Muted cream */
-  --muted-foreground: hsl(30, 10%, 45%); /* Medium brown text */
+  --muted: hsl(210, 40%, 98%); /* Muted light blue */
+  --muted-foreground: hsl(215, 16%, 47%); /* Medium gray text */
 
-  /* Accent - Warm brown accent */
-  --accent: hsl(20, 35%, 45%);
-  --accent-foreground: hsl(45, 25%, 96%);
+  /* Accent - Bright blue accent */
+  --accent: hsl(217, 91%, 60%);
+  --accent-foreground: hsl(0, 0%, 100%);
 
-  --destructive: hsl(0, 50%, 45%);
-  --destructive-foreground: hsl(45, 25%, 96%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(0, 0%, 100%);
 
-  --border: hsl(40, 20%, 85%); /* Soft brown borders */
-  --input: hsl(48, 20%, 94%); /* Cream inputs */
-  --ring: hsl(25, 40%, 35%); /* Focus ring matching primary */
+  --border: hsl(214, 32%, 91%); /* Light blue borders */
+  --input: hsl(0, 0%, 100%); /* White inputs */
+  --ring: hsl(221, 83%, 53%); /* Focus ring matching primary */
 
   --radius: 0.75rem; /* Slightly more rounded */
 

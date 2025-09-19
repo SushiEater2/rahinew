@@ -1279,57 +1279,6 @@
   background: #dc2626;
 }
 
-/* SOS Button */
-.sos-button {
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  border: none;
-  color: white;
-  cursor: pointer;
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
-  box-shadow: 0 10px 40px rgba(239, 68, 68, 0.4);
-  transition: all 0.2s ease;
-}
-
-.sos-button:hover {
-  transform: scale(1.1);
-  box-shadow: 0 15px 50px rgba(239, 68, 68, 0.6);
-}
-
-.sos-button:active {
-  transform: scale(0.95);
-}
-
-.sos-button span {
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.sos-pulse {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: rgba(239, 68, 68, 0.4);
-  animation: sosPulse 2s infinite;
-}
-
-@keyframes sosPulse {
-  0% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(1.5); opacity: 0; }
-}
 
 /* Responsive Design */
 @media (max-width: 1200px) {
@@ -1397,13 +1346,6 @@
   
   .digital-id-card {
     padding: 1.5rem;
-  }
-  
-  .sos-button {
-    width: 60px;
-    height: 60px;
-    bottom: 1rem;
-    right: 1rem;
   }
   
   .recommendations-grid {

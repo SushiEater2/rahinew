@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from './contexts/AuthContext';
+// Panic service disabled
 import Header from './components/Shared/Header';
 import Footer from './components/Shared/Footer';
-import PanicButton from './components/Shared/PanicButton';
 import Chatbot from './components/Shared/Chatbot';
 import Home from './components/Home';
 import Registration from './components/Registration';
@@ -10,19 +10,25 @@ import Dashboard from './components/Dashboard';
 import Alerts from './components/Alerts';
 import Help from './components/Help';
 import Admin from './components/Admin';
+import AdminDashboard from './components/AdminDashboard';
+import EmergencyDashboard from './components/EmergencyDashboard';
+import Login from './Login';
+import PanicSystemExample from './components/PanicSystemExample';
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState('home');
   const [isDarkTheme, setIsDarkTheme] = useState(false);
   const { isAuthenticated, isLoading } = useAuth();
 
-  // Theme management
+  // Theme management and panic system initialization
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
       setIsDarkTheme(true);
       document.documentElement.setAttribute('data-theme', 'dark');
     }
+    
+    // Panic system initialization disabled
   }, []);
 
   const toggleTheme = () => {
@@ -113,15 +119,32 @@ const App = () => {
   }, []);
 
   const handlePageChange = (pageId) => {
-    // Check if trying to access dashboard - always redirect to login
-    if (pageId === 'dashboard') {
-      // Redirect directly to login page
-      window.location.href = '/login.html';
-      return;
-    }
-    
+    // Tourist dashboard is now accessible without login
+    // Other protected pages may still require authentication
     setCurrentPage(pageId);
+    // Update URL hash
+    window.location.hash = `#${pageId}`;
   };
+
+  // Handle hash changes for direct URL navigation
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1); // Remove the '#'
+      if (hash) {
+        setCurrentPage(hash);
+      }
+    };
+    
+    // Set initial page from hash
+    handleHashChange();
+    
+    // Listen for hash changes
+    window.addEventListener('hashchange', handleHashChange);
+    
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, []);
 
   const renderPage = () => {
     switch (currentPage) {
@@ -137,6 +160,12 @@ const App = () => {
         return <Help />;
       case 'admin':
         return <Admin />;
+      case 'login':
+        return <Login />;
+      case 'emergency-dashboard':
+        return <EmergencyDashboard />;
+      case 'panic-example':
+        return <PanicSystemExample />;
       default:
         return <Home onPageChange={handlePageChange} />;
     }
@@ -149,7 +178,6 @@ const App = () => {
         {renderPage()}
       </main>
       <Footer />
-      <PanicButton />
       <Chatbot />
       
       {/* Theme Toggle Button */}

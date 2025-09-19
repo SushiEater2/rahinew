@@ -93,18 +93,29 @@ export const AuthProvider = ({ children }) => {
         if (response.success && response.token) {
           // Store backend JWT token and user data
           localStorage.setItem('authToken', response.token);
-          localStorage.setItem('user', JSON.stringify(response.data.user));
+          localStorage.setItem('user', JSON.stringify(response.user));
           
-          setUser(response.data.user);
+          setUser(response.user);
           setIsAuthenticated(true);
           
-          return { success: true, message: 'Login successful' };
+          return { success: true, message: response.message || 'Login successful' };
         } else {
-          return { success: false, error: response.error || 'Login failed' };
+          return { success: false, error: response.message || 'Login failed', action: response.action };
         }
       } catch (apiError) {
         console.warn('Backend authentication failed:', apiError.message);
-        return { success: false, error: 'Invalid credentials' };
+        
+        // Extract specific error message from backend response
+        const errorData = apiError.response?.data;
+        if (errorData) {
+          return { 
+            success: false, 
+            error: errorData.message || 'Authentication failed',
+            action: errorData.action
+          };
+        }
+        
+        return { success: false, error: 'Connection failed. Please check your internet connection.' };
       }
       
     } catch (error) {
@@ -151,16 +162,16 @@ export const AuthProvider = ({ children }) => {
         // Auto-login after successful registration
         if (response.token) {
           localStorage.setItem('authToken', response.token);
-          localStorage.setItem('user', JSON.stringify(response.data.user));
-          setUser(response.data.user);
+          localStorage.setItem('user', JSON.stringify(response.user));
+          setUser(response.user);
           setIsAuthenticated(true);
         }
         
         return { 
           success: true, 
-          user: response.data.user, 
-          message: 'Registration successful',
-          requiresVerification: !response.data.user.isEmailVerified
+          user: response.user, 
+          message: response.message || 'Registration successful',
+          requiresVerification: !response.user.isEmailVerified
         };
       } else {
         throw new Error(response.error || 'Registration failed');
@@ -169,7 +180,17 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Registration error:', error);
       
-      const errorMessage = error.response?.data?.error || error.message || 'Registration failed';
+      // Extract specific error message from backend response
+      const errorData = error.response?.data;
+      if (errorData) {
+        return { 
+          success: false, 
+          error: errorData.message || 'Registration failed',
+          action: errorData.action
+        };
+      }
+      
+      const errorMessage = error.message || 'Registration failed';
       return { success: false, error: errorMessage };
     } finally {
       setIsLoading(false);
