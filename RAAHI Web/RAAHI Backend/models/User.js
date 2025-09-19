@@ -90,12 +90,18 @@ const userSchema = new mongoose.Schema({
     coordinates: {
       type: {
         type: String,
-        enum: ['Point'],
-        default: 'Point'
+        enum: ['Point']
       },
       coordinates: {
         type: [Number], // [longitude, latitude]
-        index: '2dsphere'
+        validate: {
+          validator: function(coords) {
+            return !coords || (Array.isArray(coords) && coords.length === 2 && 
+                   coords.every(coord => typeof coord === 'number' && 
+                   coord >= -180 && coord <= 180));
+          },
+          message: 'Coordinates must be an array of two numbers [longitude, latitude] between -180 and 180'
+        }
       }
     }
   },
@@ -160,7 +166,7 @@ const userSchema = new mongoose.Schema({
 });
 
 // ✅ Fixed: removed duplicate indexes for email & username
-userSchema.index({ 'location.coordinates': '2dsphere' });
+userSchema.index({ 'location.coordinates': '2dsphere' }, { sparse: true });
 userSchema.index({ 'activityHistory.timestamp': -1 });
 
 // Pre-save middleware to hash password

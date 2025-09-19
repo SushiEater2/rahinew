@@ -6,7 +6,7 @@ const generateToken = (userId) => {
   return jwt.sign(
     { id: userId },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRE || '7d' }
+    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 };
 
@@ -42,7 +42,7 @@ const createTokenResponse = (user, statusCode, res, message = 'Success') => {
       }
     },
     tokenInfo: {
-      expiresIn: process.env.JWT_EXPIRE || '7d',
+      expiresIn: process.env.JWT_EXPIRES_IN || '7d',
       type: 'Bearer'
     }
   });
