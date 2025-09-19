@@ -158,10 +158,21 @@ const sanitizeInput = (req, res, next) => {
   const sanitize = (obj) => {
     if (!obj || typeof obj !== 'object') return obj;
     const sanitized = {};
+    const skipEscaping = ['password', 'currentPassword', 'newPassword']; // Don't escape passwords
+    
     for (const key in obj) {
-      if (typeof obj[key] === 'string') sanitized[key] = validator.escape(obj[key].trim());
-      else if (typeof obj[key] === 'object') sanitized[key] = sanitize(obj[key]);
-      else sanitized[key] = obj[key];
+      if (typeof obj[key] === 'string') {
+        if (skipEscaping.includes(key)) {
+          // Only trim passwords, don't escape them
+          sanitized[key] = obj[key].trim();
+        } else {
+          sanitized[key] = validator.escape(obj[key].trim());
+        }
+      } else if (typeof obj[key] === 'object') {
+        sanitized[key] = sanitize(obj[key]);
+      } else {
+        sanitized[key] = obj[key];
+      }
     }
     return sanitized;
   };
