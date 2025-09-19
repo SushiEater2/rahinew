@@ -75,6 +75,10 @@ const apiService = {
     resetPassword: async (token, newPassword) => {
       const response = await api.post('/auth/reset-password', { token, newPassword });
       return response.data;
+    },
+    verifyFirebaseToken: async (data) => {
+      const response = await api.post('/auth/verify-firebase', data);
+      return response.data;
     }
   },
 

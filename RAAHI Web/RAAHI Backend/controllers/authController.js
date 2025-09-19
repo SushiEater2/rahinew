@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { initializeFirebase } = require('../config/firebase');
 
 // Generate JWT token
 const generateToken = (userId) => {
@@ -85,27 +86,77 @@ const register = async (req, res, next) => {
       }
     }
 
-    // Create user object
-    const userData = {
-      email,
-      password,
-      username,
-      firstName,
-      lastName
-    };
+    let firebaseUser = null;
+    let mongoUser = null;
 
-    // Add optional fields
-    if (phone) userData.phone = phone;
-    if (travelPreferences) userData.travelPreferences = travelPreferences;
-    if (location) userData.location = location;
+    try {
+      // Initialize Firebase services
+      const firebaseServices = initializeFirebase();
+      const auth = firebaseServices.auth;
 
-    // Create user
-    const user = await User.create(userData);
+      // Create Firebase user first
+      firebaseUser = await auth.createUser({
+        email: email,
+        password: password,
+        displayName: `${firstName} ${lastName}`,
+        disabled: false,
+        emailVerified: false
+      });
 
-    // Log user creation
-    console.log(`✅ New user registered: ${user.email} (${user.username})`);
+      console.log(`✅ Firebase user created: ${firebaseUser.uid}`);
 
-    createTokenResponse(user, 201, res, 'User registered successfully');
+      // Create user object for MongoDB
+      const userData = {
+        email,
+        password,
+        username,
+        firstName,
+        lastName,
+        firebaseUid: firebaseUser.uid // Link Firebase UID
+      };
+
+      // Add optional fields
+      if (phone) userData.phone = phone;
+      if (travelPreferences) userData.travelPreferences = travelPreferences;
+      if (location) userData.location = location;
+
+      // Create MongoDB user
+      mongoUser = await User.create(userData);
+
+      console.log(`✅ MongoDB user created: ${mongoUser.email} (${mongoUser.username})`);
+
+      // Set custom claims in Firebase for user role
+      await auth.setCustomUserClaims(firebaseUser.uid, {
+        role: mongoUser.role,
+        mongoId: mongoUser._id.toString(),
+        username: mongoUser.username
+      });
+
+      // Successfully created both Firebase and MongoDB users
+      const user = mongoUser;
+      
+      // Log user creation
+      console.log(`✅ New user registered: ${user.email} (${user.username})`);
+
+      createTokenResponse(user, 201, res, 'User registered successfully');
+      
+    } catch (createError) {
+      console.error('User creation error:', createError);
+      
+      // Cleanup: If Firebase user was created but MongoDB failed, delete Firebase user
+      if (firebaseUser && !mongoUser) {
+        try {
+          const firebaseServices = initializeFirebase();
+          await firebaseServices.auth.deleteUser(firebaseUser.uid);
+          console.log(`🧹 Cleaned up Firebase user: ${firebaseUser.uid}`);
+        } catch (cleanupError) {
+          console.error('Firebase cleanup error:', cleanupError);
+        }
+      }
+      
+      // Re-throw the error to be handled by the outer catch block
+      throw createError;
+    }
 
   } catch (error) {
     console.error('Registration error:', error);
@@ -364,11 +415,71 @@ const logout = async (req, res, next) => {
   }
 };
 
+// @desc    Verify Firebase token and get user data
+// @route   POST /api/auth/verify-firebase
+// @access  Public
+const verifyFirebaseToken = async (req, res, next) => {
+  try {
+    const { firebaseToken } = req.body;
+
+    if (!firebaseToken) {
+      return res.status(400).json({
+        success: false,
+        error: 'Firebase token is required'
+      });
+    }
+
+    // Initialize Firebase services
+    const firebaseServices = initializeFirebase();
+    const auth = firebaseServices.auth;
+
+    // Verify Firebase token
+    const decodedToken = await auth.verifyIdToken(firebaseToken);
+    const { uid, email } = decodedToken;
+
+    // Find user in MongoDB by Firebase UID
+    const user = await User.findOne({ firebaseUid: uid });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found in database'
+      });
+    }
+
+    // Check if account is active
+    if (!user.isActive) {
+      return res.status(401).json({
+        success: false,
+        error: 'Account is deactivated. Please contact support.'
+      });
+    }
+
+    console.log(`✅ Firebase user verified: ${user.email} (${user.username})`);
+
+    createTokenResponse(user, 200, res, 'Firebase authentication successful');
+
+  } catch (error) {
+    console.error('Firebase token verification error:', error);
+    
+    if (error.code) {
+      // Firebase-specific errors
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid or expired Firebase token'
+      });
+    }
+    
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
   getMe,
   updateProfile,
   changePassword,
-  logout
+  logout,
+  verifyFirebaseToken
 };
