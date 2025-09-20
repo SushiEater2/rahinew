@@ -6,11 +6,13 @@ import CleanMap from './CleanMap';
 import PanicButton from './Shared/PanicButton';
 import '../styles/modern-dashboard.css';
 import '../styles/clean-map.css';
+import '../styles/loading-screen.css';
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState('');
   const [safetyScore, setSafetyScore] = useState(85);
   const [currentLocation, setCurrentLocation] = useState('India Gate, New Delhi');
@@ -31,6 +33,17 @@ const Dashboard = () => {
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
+      setLoadingStep(0);
+      
+      // Simulate loading progress
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setLoadingStep(1);
+      
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setLoadingStep(2);
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+      setLoadingStep(3);
       
       // Check if using mock authentication
       const token = localStorage.getItem('authToken');
@@ -102,13 +115,29 @@ const Dashboard = () => {
 
   if (isLoading) {
     return (
-      <section id="dashboard" className="page active">
-        <div className="container">
-          <div className="loading-spinner" style={{ textAlign: 'center', padding: '2rem' }}>
-            <p>Loading dashboard...</p>
+      <div className="simple-loading-screen">
+        <div className="loading-content">
+          <div className="loading-header">
+            <h2>RAAHI</h2>
+            <p>Smart Tourism</p>
+          </div>
+          
+          <div className="loading-spinner">
+            <div className="spinner"></div>
+          </div>
+          
+          <p className="loading-message">Loading dashboard...</p>
+          
+          <div className="loading-progress">
+            <div className="progress-bar">
+              <div 
+                className="progress-fill" 
+                style={{ width: `${(loadingStep + 1) * 25}%` }}
+              ></div>
+            </div>
           </div>
         </div>
-      </section>
+      </div>
     );
   }
 
