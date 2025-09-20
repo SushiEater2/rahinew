@@ -112,8 +112,43 @@ const optionalAuth = async (req, res, next) => {
   }
 };
 
+// Enhanced optional authentication that sets guest user for unauthenticated requests
+const optionalAuthWithGuest = async (req, res, next) => {
+  try {
+    let token;
+
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findById(decoded.id).select('-password');
+      
+      if (user && user.isActive) {
+        req.user = user;
+        req.isAuthenticated = true;
+      } else {
+        req.isAuthenticated = false;
+      }
+    } else {
+      // Set guest user for unauthenticated requests
+      req.user = null;
+      req.isAuthenticated = false;
+    }
+
+    next();
+  } catch (error) {
+    // Continue as guest user even if token validation fails
+    req.user = null;
+    req.isAuthenticated = false;
+    next();
+  }
+};
+
 module.exports = {
   authenticate,
   authorize,
-  optionalAuth
+  optionalAuth,
+  optionalAuthWithGuest
 };

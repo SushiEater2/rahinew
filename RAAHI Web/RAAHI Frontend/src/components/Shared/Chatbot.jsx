@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import apiService from '../../services/api';
+import geminiService from '../../services/geminiService';
 
 const Chatbot = () => {
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
@@ -29,6 +30,7 @@ const Chatbot = () => {
     setMessages(prevMessages => [...prevMessages, typingIndicator]);
 
     try {
+      // First try the backend API
       const response = await apiService.ai.getChatbotResponse(newUserMessage.text);
       const botText = response.message || "I'm sorry, I'm having trouble connecting right now. Please try again later.";
       
@@ -36,11 +38,35 @@ const Chatbot = () => {
         prevMessages.filter(msg => !msg.isTyping).concat({ text: botText, sender: 'bot' })
       );
 
-    } catch (error) {
-      console.error("Error fetching Gemini response:", error);
-      setMessages(prevMessages => 
-        prevMessages.filter(msg => !msg.isTyping).concat({ text: "I'm sorry, I'm having trouble connecting right now. Please try again later.", sender: 'bot' })
-      );
+    } catch (backendError) {
+      console.log("Backend unavailable, trying Gemini AI directly:", backendError.message);
+      
+      // If backend fails, try Gemini AI directly
+      try {
+        if (geminiService.isAvailable()) {
+          const geminiResponse = await geminiService.generateResponse(newUserMessage.text);
+          const botText = geminiResponse.message || "I'm sorry, I couldn't generate a response right now.";
+          
+          setMessages(prevMessages => 
+            prevMessages.filter(msg => !msg.isTyping).concat({ 
+              text: botText, 
+              sender: 'bot'
+            })
+          );
+        } else {
+          throw new Error('Gemini AI service not available');
+        }
+      } catch (geminiError) {
+        console.error("Error with Gemini AI:", geminiError);
+        
+        // Final fallback message
+        setMessages(prevMessages => 
+          prevMessages.filter(msg => !msg.isTyping).concat({ 
+            text: "I'm sorry, I'm experiencing technical difficulties right now. Please try again later or contact support if the issue persists.", 
+            sender: 'bot' 
+          })
+        );
+      }
     }
   };
 

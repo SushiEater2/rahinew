@@ -2,13 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import apiService from '../services/api';
-import SimpleMap from './SimpleMap';
+import CleanMap from './CleanMap';
+import PanicButton from './Shared/PanicButton';
 import '../styles/modern-dashboard.css';
+import '../styles/clean-map.css';
+import '../styles/loading-screen.css';
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState('');
   const [safetyScore, setSafetyScore] = useState(85);
   const [currentLocation, setCurrentLocation] = useState('India Gate, New Delhi');
@@ -29,6 +33,17 @@ const Dashboard = () => {
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
+      setLoadingStep(0);
+      
+      // Simulate loading progress
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setLoadingStep(1);
+      
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setLoadingStep(2);
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+      setLoadingStep(3);
       
       // Check if using mock authentication
       const token = localStorage.getItem('authToken');
@@ -87,19 +102,42 @@ const Dashboard = () => {
   const handleLocationUpdate = (locationData) => {
     setMapLocation(locationData);
     setCurrentLocation(locationData.address || 'Current Location');
+    
+    // Show live tracking indicator in location
+    if (locationData.address && locationData.address.includes('Live')) {
+      setCurrentLocation(`📍 ${locationData.address}`);
+    }
+    
     // You can also update safety score based on location
     // This is where you'd call your safety API
+    console.log('Location updated:', locationData);
   };
 
   if (isLoading) {
     return (
-      <section id="dashboard" className="page active">
-        <div className="container">
-          <div className="loading-spinner" style={{ textAlign: 'center', padding: '2rem' }}>
-            <p>Loading dashboard...</p>
+      <div className="simple-loading-screen">
+        <div className="loading-content">
+          <div className="loading-header">
+            <h2>RAAHI</h2>
+            <p>Smart Tourism</p>
+          </div>
+          
+          <div className="loading-spinner">
+            <div className="spinner"></div>
+          </div>
+          
+          <p className="loading-message">Loading dashboard...</p>
+          
+          <div className="loading-progress">
+            <div className="progress-bar">
+              <div 
+                className="progress-fill" 
+                style={{ width: `${(loadingStep + 1) * 25}%` }}
+              ></div>
+            </div>
           </div>
         </div>
-      </section>
+      </div>
     );
   }
 
@@ -187,15 +225,8 @@ const Dashboard = () => {
               className={`tab-btn ${activeTab === 'map' ? 'active' : ''}`}
               onClick={() => setActiveTab('map')}
             >
-              <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-              Map
-            </button>
-            <button 
-              className={`tab-btn ${activeTab === 'safety-map' ? 'active' : ''}`}
-              onClick={() => setActiveTab('safety-map')}
-            >
               <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M20.5,3L20.34,3.03L15,5.1L9,3L3.36,4.9C3.15,4.97 3,5.15 3,5.38V20.5A0.5,0.5 0 0,0 3.5,21L3.66,20.97L9,18.9L15,21L20.64,19.1C20.85,19.03 21,18.85 21,18.62V3.5A0.5,0.5 0 0,0 20.5,3Z"/></svg>
-              Safety Map
+              Map
             </button>
           </div>
 
@@ -424,256 +455,71 @@ const Dashboard = () => {
 
             {activeTab === 'map' && (
               <div className="map-tab">
-                <div className="simple-map-section">
-                  <div className="map-header">
-                    <h3>🗺️ Interactive Map</h3>
-                    <p style={{ margin: '8px 0', color: '#6b7280', fontSize: '14px' }}>
-                      Explore popular tourist attractions around Delhi
+                <div className="clean-map-section">
+                  <div className="map-header" style={{ marginBottom: '20px' }}>
+                    <h3 style={{ margin: '0 0 10px 0', color: '#1f2937', fontSize: '24px', fontWeight: '600' }}>
+                      🗺️ Explore Delhi
+                    </h3>
+                    <p style={{ margin: '0', color: '#6b7280', fontSize: '16px' }}>
+                      Discover popular tourist attractions and navigate around the city
                     </p>
                   </div>
                   
-                  <div className="map-container">
-                    <SimpleMap 
+                  <div className="map-container" style={{
+                    width: '100%',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                    border: '1px solid #e2e8f0'
+                  }}>
+                    <CleanMap 
                       onLocationUpdate={handleLocationUpdate}
                     />
-                    
-                    <div className="map-info" style={{ 
-                      marginTop: '20px', 
-                      padding: '20px', 
-                      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)', 
-                      borderRadius: '12px',
-                      border: '1px solid #e2e8f0'
-                    }}>
-                      <h4 style={{ margin: '0 0 15px 0', color: '#374151', fontSize: '16px' }}>Map Features:</h4>
-                      <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-                        gap: '15px' 
-                      }}>
-                        <div className="feature-item" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{ 
-                            width: '12px', 
-                            height: '12px', 
-                            borderRadius: '50%', 
-                            backgroundColor: '#007bff' 
-                          }}></div>
-                          <span style={{ fontSize: '14px', color: '#4b5563' }}>Your Current Location</span>
-                        </div>
-                        <div className="feature-item" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{ 
-                            width: '12px', 
-                            height: '12px', 
-                            borderRadius: '50%', 
-                            backgroundColor: '#34d399' 
-                          }}></div>
-                          <span style={{ fontSize: '14px', color: '#4b5563' }}>Tourist Attractions</span>
-                        </div>
-                        <div className="feature-item" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '14px', color: '#4b5563' }}>🏛️ Historic Sites</span>
-                        </div>
-                        <div className="feature-item" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '14px', color: '#4b5563' }}>📍 Click markers for details</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'safety-map' && (
-              <div className="map-tab">
-                <div className="map-safety-grid">
-                  {/* Google Maps Section */}
-                  <div className="interactive-map-section">
-                    <div className="map-header">
-                      <h3>🛡️ Interactive Safety Map</h3>
-                      <p style={{ margin: '8px 0', color: '#6b7280', fontSize: '14px' }}>
-                        Real-time safety information for different areas
-                      </p>
-                      <div className="map-controls">
-                        <button className="map-control-btn active">
-                          <svg viewBox="0 0 24 24" width="16" height="16">
-                            <path fill="currentColor" d="M12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5M12,2A7,7 0 0,0 5,9C5,14.25 12,22 12,22C12,22 19,14.25 19,9A7,7 0 0,0 12,2Z"/>
-                          </svg>
-                          Safety View
-                        </button>
-                        <button className="map-control-btn">
-                          <svg viewBox="0 0 24 24" width="16" height="16">
-                            <path fill="currentColor" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M17,7H15V5A2,2 0 0,0 13,3H11A2,2 0 0,0 9,5V7H7L7.5,9L16.5,9L17,7M16,10H8V11A1,1 0 0,0 9,12H15A1,1 0 0,0 16,11V10Z"/>
-                          </svg>
-                          Services
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className="map-container">
-                      <GoogleMap 
-                        onLocationUpdate={handleLocationUpdate}
-                        safetyData={[]} // You can pass safety data from your backend
-                        emergencyServices={[]} // Pass emergency services data
-                        touristAttractions={[]} // Pass tourist attractions data
-                      />
-                      
-                      <div className="map-legend" style={{ marginTop: '20px' }}>
-                        <div className="legend-item">
-                          <div className="legend-color safe" style={{ backgroundColor: '#10b981' }}></div>
-                          <span>Safe Zones (80+)</span>
-                        </div>
-                        <div className="legend-item">
-                          <div className="legend-color moderate" style={{ backgroundColor: '#f59e0b' }}></div>
-                          <span>Moderate Risk (50-79)</span>
-                        </div>
-                        <div className="legend-item">
-                          <div className="legend-color risky" style={{ backgroundColor: '#ef4444' }}></div>
-                          <span>High Risk (0-49)</span>
-                        </div>
-                        <div className="legend-item">
-                          <div className="legend-color" style={{ backgroundColor: '#007bff' }}></div>
-                          <span>Tourist Attractions</span>
-                        </div>
-                        <div className="legend-item">
-                          <div className="legend-color" style={{ backgroundColor: '#ff4444' }}></div>
-                          <span>Emergency Services</span>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                   
-                  {/* Safety Score Section */}
-                  <div className="area-safety-section">
-                    <div className="safety-score-header">
-                      <h3>Area Safety Score</h3>
-                      <div className="live-indicator">
-                        <div className="pulse-dot"></div>
-                        Live Updates
+                  <div className="map-info" style={{ 
+                    marginTop: '25px', 
+                    padding: '20px', 
+                    background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)', 
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0'
+                  }}>
+                    <h4 style={{ margin: '0 0 15px 0', color: '#374151', fontSize: '18px', fontWeight: '600' }}>🌟 Map Features</h4>
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+                      gap: '15px' 
+                    }}>
+                      <div className="feature-item" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ 
+                          width: '14px', 
+                          height: '14px', 
+                          borderRadius: '50%', 
+                          backgroundColor: '#007bff',
+                          border: '2px solid #ffffff',
+                          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' 
+                        }}></div>
+                        <span style={{ fontSize: '15px', color: '#4b5563', fontWeight: '500' }}>Your Current Location</span>
                       </div>
-                    </div>
-                    
-                    <div className="safety-score-display">
-                      <div className="score-circle">
-                        <svg className="progress-ring" width="140" height="140">
-                          <circle 
-                            className="progress-ring-circle" 
-                            stroke="#e2e8f0" 
-                            strokeWidth="10" 
-                            fill="transparent" 
-                            r="55" 
-                            cx="70" 
-                            cy="70"
-                          />
-                          <circle 
-                            className="progress-ring-circle active" 
-                            stroke={safetyScore >= 80 ? '#10b981' : safetyScore >= 50 ? '#f59e0b' : '#ef4444'}
-                            strokeWidth="10" 
-                            fill="transparent" 
-                            r="55" 
-                            cx="70" 
-                            cy="70"
-                            strokeDasharray={`${safetyScore * 3.45} 345.58`}
-                            strokeDashoffset="0"
-                          />
-                        </svg>
-                        <div className="score-text">
-                          <span className="score-number">{safetyScore}</span>
-                          <span className="score-label">
-                            {safetyScore >= 80 ? 'Very Safe' : safetyScore >= 50 ? 'Moderate' : 'High Risk'}
-                          </span>
-                        </div>
+                      <div className="feature-item" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ 
+                          width: '14px', 
+                          height: '14px', 
+                          borderRadius: '50%', 
+                          backgroundColor: '#34d399',
+                          border: '2px solid #ffffff',
+                          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' 
+                        }}></div>
+                        <span style={{ fontSize: '15px', color: '#4b5563', fontWeight: '500' }}>Tourist Attractions</span>
                       </div>
-                      
-                      <div className="area-details">
-                        <div className="current-area-info">
-                          <h4>Current Area: {currentLocation}</h4>
-                          <p className="area-description">
-                            {safetyScore >= 80 && "This area is considered very safe with low crime rates and good infrastructure."}
-                            {safetyScore >= 50 && safetyScore < 80 && "This area has moderate safety levels. Stay alert and follow basic precautions."}
-                            {safetyScore < 50 && "High risk area. Exercise extreme caution and consider alternative routes."}
-                          </p>
-                        </div>
-                        
-                        <div className="safety-factors">
-                          <div className="factor-grid">
-                            <div className={`factor-item ${safetyScore >= 80 ? 'positive' : safetyScore >= 50 ? 'neutral' : 'negative'}`}>
-                              <span className="factor-icon">
-                                {safetyScore >= 80 ? '✓' : safetyScore >= 50 ? '⚠' : '❌'}
-                              </span>
-                              <div className="factor-content">
-                                <span className="factor-label">Crime Rate</span>
-                                <span className="factor-value">
-                                  {safetyScore >= 80 ? 'Low' : safetyScore >= 50 ? 'Moderate' : 'High'}
-                                </span>
-                              </div>
-                            </div>
-                            
-                            <div className={`factor-item ${safetyScore >= 70 ? 'positive' : safetyScore >= 40 ? 'neutral' : 'negative'}`}>
-                              <span className="factor-icon">
-                                {safetyScore >= 70 ? '✓' : safetyScore >= 40 ? '⚠' : '❌'}
-                              </span>
-                              <div className="factor-content">
-                                <span className="factor-label">Crowd Density</span>
-                                <span className="factor-value">
-                                  {safetyScore >= 70 ? 'Normal' : safetyScore >= 40 ? 'High' : 'Very High'}
-                                </span>
-                              </div>
-                            </div>
-                            
-                            <div className="factor-item positive">
-                              <span className="factor-icon">✓</span>
-                              <div className="factor-content">
-                                <span className="factor-label">Weather</span>
-                                <span className="factor-value">Good</span>
-                              </div>
-                            </div>
-                            
-                            <div className={`factor-item ${safetyScore >= 75 ? 'positive' : safetyScore >= 45 ? 'neutral' : 'negative'}`}>
-                              <span className="factor-icon">
-                                {safetyScore >= 75 ? '✓' : safetyScore >= 45 ? '⚠' : '❌'}
-                              </span>
-                              <div className="factor-content">
-                                <span className="factor-label">Emergency Response</span>
-                                <span className="factor-value">
-                                  {safetyScore >= 75 ? 'Excellent' : safetyScore >= 45 ? 'Good' : 'Limited'}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                      <div className="feature-item" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontSize: '15px', color: '#4b5563', fontWeight: '500' }}>📍 Click markers for details</span>
                       </div>
-                    </div>
-                    
-                    {/* Nearby Services */}
-                    <div className="nearby-services">
-                      <h4>Nearby Emergency Services</h4>
-                      <div className="services-grid">
-                        <div className="service-item">
-                          <span className="service-icon">🏥</span>
-                          <div className="service-info">
-                            <span className="service-name">AIIMS Hospital</span>
-                            <span className="service-distance">2.3 km</span>
-                          </div>
-                        </div>
-                        <div className="service-item">
-                          <span className="service-icon">🚔</span>
-                          <div className="service-info">
-                            <span className="service-name">CP Police Station</span>
-                            <span className="service-distance">1.1 km</span>
-                          </div>
-                        </div>
-                        <div className="service-item">
-                          <span className="service-icon">🚑</span>
-                          <div className="service-info">
-                            <span className="service-name">Fire Station</span>
-                            <span className="service-distance">1.8 km</span>
-                          </div>
-                        </div>
-                        <div className="service-item">
-                          <span className="service-icon">🚇</span>
-                          <div className="service-info">
-                            <span className="service-name">Rajiv Chowk Metro</span>
-                            <span className="service-distance">0.5 km</span>
-                          </div>
-                        </div>
+                      <div className="feature-item" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontSize: '15px', color: '#4b5563', fontWeight: '500' }}>📍 Live location tracking</span>
+                      </div>
+                      <div className="feature-item" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontSize: '15px', color: '#4b5563', fontWeight: '500' }}>🌐 Full Google Maps experience</span>
                       </div>
                     </div>
                   </div>
@@ -683,15 +529,9 @@ const Dashboard = () => {
           </div>
         </div>
       </main>
-
-      {/* SOS Button - Fixed Position */}
-      <button className="sos-button">
-        <div className="sos-pulse"></div>
-        <svg viewBox="0 0 24 24" width="24" height="24">
-          <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.08 5.74-.08 5.74s-.12 1.10-.24 1.26c-.12.16-.36.22-.60.22-.24 0-.48-.06-.6-.22-.12-.16-.24-1.26-.24-1.26s.07-4.16-.08-5.74c-.06-.65.21-1.14.86-1.26 1.02-.18 1.82.26 1.98 1.26zM12 15.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
-        </svg>
-        <span>SOS</span>
-      </button>
+      
+      {/* Panic Button - Only in Dashboard */}
+      <PanicButton />
     </div>
   );
 };

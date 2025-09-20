@@ -6,7 +6,8 @@ const {
   updateProfile,
   changePassword,
   logout,
-  verifyFirebaseToken
+  verifyFirebaseToken,
+  touristDepartmentLogin
 } = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
 const {
@@ -25,6 +26,7 @@ router.use(sanitizeInput);
 // Public routes
 router.post('/register', validateRegistration, validateTravelPreferences, register);
 router.post('/login', validateLogin, login);
+router.post('/tourist-dept-login', touristDepartmentLogin);
 router.post('/verify-firebase', verifyFirebaseToken);
 
 // Protected routes (require authentication)

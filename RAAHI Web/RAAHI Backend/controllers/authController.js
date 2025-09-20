@@ -1,486 +1,342 @@
-const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const { initializeFirebase } = require('../config/firebase');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 // Generate JWT token
-const generateToken = (userId) => {
+const generateToken = (user) => {
   return jwt.sign(
-    { id: userId },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    { id: user._id, email: user.email },
+    process.env.JWT_SECRET || 'secretkey',
+    { expiresIn: '1d' }
   );
 };
 
-// Create token response
-const createTokenResponse = (user, statusCode, res, message = 'Success') => {
-  const token = generateToken(user._id);
-  
-  // Remove password from output
-  user.password = undefined;
-  
-  // Update last login
-  user.lastLogin = new Date();
-  user.save({ validateBeforeSave: false });
-
-  res.status(statusCode).json({
-    success: true,
-    message,
-    token,
-    data: {
-      user: {
-        id: user._id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        avatar: user.avatar,
-        role: user.role,
-        isEmailVerified: user.isEmailVerified,
-        travelPreferences: user.travelPreferences,
-        location: user.location,
-        createdAt: user.createdAt,
-        lastLogin: user.lastLogin
-      }
-    },
-    tokenInfo: {
-      expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-      type: 'Bearer'
-    }
-  });
-};
-
-// @desc    Register user
-// @route   POST /api/auth/register
-// @access  Public
-const register = async (req, res, next) => {
+// REGISTER USER
+exports.register = async (req, res) => {
   try {
-    const {
-      email,
-      password,
+    const { firstName, lastName, email, password } = req.body;
+
+    if (!password || typeof password !== 'string') {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Password is required' 
+      });
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({ 
+        success: false,
+        message: 'Email already exists. Please use a different email or login instead.',
+        action: 'login'
+      });
+    }
+
+    // Don't hash password here - User model pre-save hook will do it
+    const newUser = new User({
       firstName,
       lastName,
-      phone,
-      travelPreferences,
-      location
-    } = req.body;
+      email,
+      password, // Let the model handle hashing
+    });
 
-    // Check if user already exists by email
-    const existingUser = await User.findOne({ email });
+    await newUser.save();
 
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        error: 'A user with this email already exists'
-      });
-    }
-
-
-    let firebaseUser = null;
-    let mongoUser = null;
-
-    try {
-      // Try to create Firebase user, but don't fail if Firebase is not available
-      try {
-        const firebaseServices = initializeFirebase();
-        const auth = firebaseServices.auth;
-
-        // Create Firebase user first
-        firebaseUser = await auth.createUser({
-          email: email,
-          password: password,
-          displayName: `${firstName} ${lastName}`,
-          disabled: false,
-          emailVerified: false
-        });
-
-        console.log(`✅ Firebase user created: ${firebaseUser.uid}`);
-      } catch (firebaseError) {
-        console.warn('⚠️  Firebase user creation failed, continuing with MongoDB-only registration:', firebaseError.message);
-        firebaseUser = null;
+    res.status(201).json({
+      success: true,
+      message: 'Account created successfully! You are now logged in.',
+      token: generateToken(newUser),
+      user: {
+        id: newUser._id,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        email: newUser.email
       }
-
-      // Create user object for MongoDB
-      const userData = {
-        email,
-        password,
-        firstName,
-        lastName
-      };
-      
-      // Add Firebase UID if Firebase user was created successfully
-      if (firebaseUser) {
-        userData.firebaseUid = firebaseUser.uid;
-      }
-
-      // Add optional fields
-      if (phone) userData.phone = phone;
-      if (travelPreferences) userData.travelPreferences = travelPreferences;
-      if (location) userData.location = location;
-
-      // Create MongoDB user
-      mongoUser = await User.create(userData);
-
-      console.log(`✅ MongoDB user created: ${mongoUser.email}`);
-
-      // Set custom claims in Firebase for user role (only if Firebase user was created)
-      if (firebaseUser) {
-        try {
-          const firebaseServices = initializeFirebase();
-          await firebaseServices.auth.setCustomUserClaims(firebaseUser.uid, {
-            role: mongoUser.role,
-            mongoId: mongoUser._id.toString()
-          });
-          console.log(`✅ Firebase custom claims set for user: ${firebaseUser.uid}`);
-        } catch (claimsError) {
-          console.warn('⚠️  Failed to set Firebase custom claims:', claimsError.message);
-        }
-      }
-
-      // Successfully created both Firebase and MongoDB users
-      const user = mongoUser;
-      
-      // Log user creation
-      console.log(`✅ New user registered: ${user.email}`);
-
-      createTokenResponse(user, 201, res, 'User registered successfully');
-      
-    } catch (createError) {
-      console.error('User creation error:', createError);
-      
-      // Cleanup: If Firebase user was created but MongoDB failed, delete Firebase user
-      if (firebaseUser && !mongoUser) {
-        try {
-          const firebaseServices = initializeFirebase();
-          await firebaseServices.auth.deleteUser(firebaseUser.uid);
-          console.log(`🧹 Cleaned up Firebase user: ${firebaseUser.uid}`);
-        } catch (cleanupError) {
-          console.error('Firebase cleanup error:', cleanupError);
-        }
-      }
-      
-      // Re-throw the error to be handled by the outer catch block
-      throw createError;
-    }
-
-  } catch (error) {
-    console.error('Registration error:', error);
+    });
+  } catch (err) {
+    console.error('Register Error:', err.message);
     
-    if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map(err => err.message);
-      return res.status(400).json({
+    // Handle MongoDB duplicate key errors more gracefully
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyValue)[0];
+      return res.status(409).json({ 
         success: false,
-        error: 'Validation error',
-        details: errors
+        message: `${field.charAt(0).toUpperCase() + field.slice(1)} already exists. Please use a different ${field}.`,
+        action: 'login'
       });
     }
-
-    next(error);
+    
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error. Please try again later.' 
+    });
   }
 };
 
-// @desc    Login user
-// @route   POST /api/auth/login
-// @access  Public
-const login = async (req, res, next) => {
+// LOGIN USER
+exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user and include password for comparison
+    if (!password || typeof password !== 'string') {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Password is required' 
+      });
+    }
+
+    // Need to explicitly select password field since it's excluded by default
     const user = await User.findOne({ email }).select('+password');
-
     if (!user) {
-      return res.status(401).json({
+      return res.status(404).json({ 
         success: false,
-        error: 'Invalid credentials'
+        message: 'User does not exist. Please register first.',
+        action: 'register'
       });
     }
 
-    // Check if account is active
-    if (!user.isActive) {
-      return res.status(401).json({
+    // Use the model's password comparison method
+    const isMatch = await user.correctPassword(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ 
         success: false,
-        error: 'Account is deactivated. Please contact support.'
+        message: 'Invalid credentials. Please check your password.',
+        action: 'retry'
       });
     }
 
-    // Check password
-    const isPasswordCorrect = await user.correctPassword(password, user.password);
-
-    if (!isPasswordCorrect) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid credentials'
-      });
-    }
-
-    console.log(`✅ User logged in: ${user.email}`);
-
-    createTokenResponse(user, 200, res, 'Logged in successfully');
-
-  } catch (error) {
-    console.error('Login error:', error);
-    next(error);
-  }
-};
-
-// @desc    Get current user
-// @route   GET /api/auth/me
-// @access  Private
-const getMe = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.user.id);
-
-    res.status(200).json({
+    res.json({
       success: true,
-      data: {
-        user: {
-          id: user._id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          avatar: user.avatar,
-          phone: user.phone,
-          dateOfBirth: user.dateOfBirth,
-          role: user.role,
-          isEmailVerified: user.isEmailVerified,
-          isActive: user.isActive,
-          travelPreferences: user.travelPreferences,
-          location: user.location,
-          createdAt: user.createdAt,
-          lastLogin: user.lastLogin
-        }
+      message: 'Login successful',
+      token: generateToken(user),
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email
       }
     });
-
-  } catch (error) {
-    console.error('Get current user error:', error);
-    next(error);
+  } catch (err) {
+    console.error('Login Error:', err.message);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error. Please try again later.' 
+    });
   }
 };
 
-// @desc    Update user profile
-// @route   PUT /api/auth/profile
-// @access  Private
-const updateProfile = async (req, res, next) => {
+// GET CURRENT USER
+exports.getMe = async (req, res) => {
   try {
-    const {
-      firstName,
-      lastName,
-      phone,
-      dateOfBirth,
-      travelPreferences,
-      location
-    } = req.body;
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({ success: true, user });
+  } catch (err) {
+    console.error('Get Me Error:', err.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
 
-    // Build update object with only provided fields
-    const updateData = {};
-    if (firstName) updateData.firstName = firstName;
-    if (lastName) updateData.lastName = lastName;
-    if (phone !== undefined) updateData.phone = phone; // Allow clearing phone
-    if (dateOfBirth) updateData.dateOfBirth = dateOfBirth;
-    if (travelPreferences) updateData.travelPreferences = travelPreferences;
-    if (location) updateData.location = location;
-
+// UPDATE PROFILE
+exports.updateProfile = async (req, res) => {
+  try {
+    const updates = req.body;
+    delete updates.password; // Don't allow password updates through this endpoint
+    
     const user = await User.findByIdAndUpdate(
       req.user.id,
-      updateData,
-      {
-        new: true,
-        runValidators: true
-      }
-    );
-
+      updates,
+      { new: true, runValidators: true }
+    ).select('-password');
+    
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
+      return res.status(404).json({ message: 'User not found' });
     }
-
-    console.log(`✅ Profile updated for user: ${user.email}`);
-
-    res.status(200).json({
+    
+    res.json({
       success: true,
       message: 'Profile updated successfully',
-      data: {
-        user: {
-          id: user._id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          avatar: user.avatar,
-          phone: user.phone,
-          dateOfBirth: user.dateOfBirth,
-          role: user.role,
-          isEmailVerified: user.isEmailVerified,
-          travelPreferences: user.travelPreferences,
-          location: user.location,
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt
-        }
-      }
+      user
     });
-
-  } catch (error) {
-    console.error('Update profile error:', error);
-    
-    if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map(err => err.message);
-      return res.status(400).json({
-        success: false,
-        error: 'Validation error',
-        details: errors
-      });
-    }
-
-    next(error);
+  } catch (err) {
+    console.error('Update Profile Error:', err.message);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
-// @desc    Change password
-// @route   PUT /api/auth/password
-// @access  Private
-const changePassword = async (req, res, next) => {
+// CHANGE PASSWORD
+exports.changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-
+    
     if (!currentPassword || !newPassword) {
-      return res.status(400).json({
-        success: false,
-        error: 'Current password and new password are required'
-      });
+      return res.status(400).json({ message: 'Current and new passwords are required' });
     }
-
-    // Get user with password
+    
     const user = await User.findById(req.user.id).select('+password');
-
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
+      return res.status(404).json({ message: 'User not found' });
     }
-
-    // Check current password
-    const isCurrentPasswordCorrect = await user.correctPassword(currentPassword, user.password);
-
-    if (!isCurrentPasswordCorrect) {
-      return res.status(400).json({
-        success: false,
-        error: 'Current password is incorrect'
-      });
+    
+    const isMatch = await user.correctPassword(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Current password is incorrect' });
     }
-
-    // Validate new password
-    if (newPassword.length < 6) {
-      return res.status(400).json({
-        success: false,
-        error: 'New password must be at least 6 characters long'
-      });
-    }
-
-    // Update password
+    
+    // Let the model's pre-save hook handle hashing
     user.password = newPassword;
     await user.save();
-
-    console.log(`✅ Password changed for user: ${user.email}`);
-
-    res.status(200).json({
+    
+    res.json({
       success: true,
       message: 'Password changed successfully'
     });
-
-  } catch (error) {
-    console.error('Change password error:', error);
-    next(error);
+  } catch (err) {
+    console.error('Change Password Error:', err.message);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
-// @desc    Logout user
-// @route   POST /api/auth/logout
-// @access  Private
-const logout = async (req, res, next) => {
+// LOGOUT USER
+exports.logout = async (req, res) => {
   try {
-    // In a stateless JWT system, logout is primarily handled on the frontend
-    // by removing the token from storage. However, we can log the event.
-    
-    console.log(`✅ User logged out: ${req.user.email}`);
-    
-    res.status(200).json({
+    // For JWT, logout is typically handled on the client side
+    // by removing the token. Here we just confirm the logout.
+    res.json({
       success: true,
-      message: 'Logged out successfully'
+      message: 'Logout successful'
     });
-
-  } catch (error) {
-    console.error('Logout error:', error);
-    next(error);
+  } catch (err) {
+    console.error('Logout Error:', err.message);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
-// @desc    Verify Firebase token and get user data
-// @route   POST /api/auth/verify-firebase
-// @access  Public
-const verifyFirebaseToken = async (req, res, next) => {
+// TOURIST DEPARTMENT LOGIN (State + Password)
+exports.touristDepartmentLogin = async (req, res) => {
   try {
-    const { firebaseToken } = req.body;
+    const { state, password } = req.body;
 
-    if (!firebaseToken) {
-      return res.status(400).json({
+    if (!state || !password) {
+      return res.status(400).json({ 
         success: false,
-        error: 'Firebase token is required'
+        message: 'State and password are required' 
       });
     }
 
-    // Initialize Firebase services
-    const firebaseServices = initializeFirebase();
-    const auth = firebaseServices.auth;
+    if (typeof password !== 'string') {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid password format' 
+      });
+    }
 
-    // Verify Firebase token
-    const decodedToken = await auth.verifyIdToken(firebaseToken);
-    const { uid, email } = decodedToken;
+    // Normalize state name (remove extra spaces, convert to title case)
+    const normalizedState = state.trim().toLowerCase().replace(/\s+/g, ' ');
+    
+    // State mapping for tourist departments
+    const stateMapping = {
+      'uttar pradesh': 'tourist.department.up@gmail.com',
+      'up': 'tourist.department.up@gmail.com',
+      'maharashtra': 'tourist.department.mh@gmail.com',
+      'mh': 'tourist.department.mh@gmail.com',
+      'rajasthan': 'tourist.department.rj@gmail.com',
+      'rj': 'tourist.department.rj@gmail.com',
+      'kerala': 'tourist.department.kl@gmail.com',
+      'kl': 'tourist.department.kl@gmail.com',
+      'goa': 'tourist.department.ga@gmail.com',
+      'ga': 'tourist.department.ga@gmail.com',
+      'himachal pradesh': 'tourist.department.hp@gmail.com',
+      'hp': 'tourist.department.hp@gmail.com',
+      'tamil nadu': 'tourist.department.tn@gmail.com',
+      'tn': 'tourist.department.tn@gmail.com',
+      'karnataka': 'tourist.department.ka@gmail.com',
+      'ka': 'tourist.department.ka@gmail.com',
+      'west bengal': 'tourist.department.wb@gmail.com',
+      'wb': 'tourist.department.wb@gmail.com',
+      'gujarat': 'tourist.department.gj@gmail.com',
+      'gj': 'tourist.department.gj@gmail.com'
+    };
 
-    // Find user in MongoDB by Firebase UID
-    const user = await User.findOne({ firebaseUid: uid });
+    const email = stateMapping[normalizedState];
+    if (!email) {
+      return res.status(404).json({ 
+        success: false,
+        message: `Tourist department not found for state: ${state}. Please contact administrator.`,
+        availableStates: Object.keys(stateMapping).filter(key => !key.includes('.')).map(s => 
+          s.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+        )
+      });
+    }
 
+    // Find user by email and role
+    const user = await User.findOne({ 
+      email: email,
+      role: 'tourist_department',
+      isActive: true 
+    }).select('+password');
+    
     if (!user) {
-      return res.status(404).json({
+      return res.status(404).json({ 
         success: false,
-        error: 'User not found in database'
+        message: `Tourist department account not found for ${state}. Please contact administrator.`
       });
     }
 
-    // Check if account is active
-    if (!user.isActive) {
-      return res.status(401).json({
+    // Verify password
+    const isMatch = await user.correctPassword(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ 
         success: false,
-        error: 'Account is deactivated. Please contact support.'
+        message: 'Invalid credentials. Please check your password.',
+        action: 'retry'
       });
     }
 
-    console.log(`✅ Firebase user verified: ${user.email}`);
+    // Update last login
+    await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
 
-    createTokenResponse(user, 200, res, 'Firebase authentication successful');
-
-  } catch (error) {
-    console.error('Firebase token verification error:', error);
-    
-    if (error.code) {
-      // Firebase-specific errors
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid or expired Firebase token'
-      });
-    }
-    
-    next(error);
+    res.json({
+      success: true,
+      message: `Welcome, ${user.location} Tourism Department!`,
+      token: generateToken(user),
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        location: user.location
+      }
+    });
+  } catch (err) {
+    console.error('Tourist Department Login Error:', err.message);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error. Please try again later.' 
+    });
   }
 };
 
-module.exports = {
-  register,
-  login,
-  getMe,
-  updateProfile,
-  changePassword,
-  logout,
-  verifyFirebaseToken
+// VERIFY FIREBASE TOKEN
+exports.verifyFirebaseToken = async (req, res) => {
+  try {
+    const { token } = req.body;
+    
+    if (!token) {
+      return res.status(400).json({ message: 'Firebase token is required' });
+    }
+    
+    // TODO: Add Firebase Admin SDK verification logic here
+    // For now, return a placeholder response
+    res.json({
+      success: true,
+      message: 'Firebase token verification endpoint - implementation pending'
+    });
+  } catch (err) {
+    console.error('Verify Firebase Token Error:', err.message);
+    res.status(500).json({ message: 'Server error' });
+  }
 };

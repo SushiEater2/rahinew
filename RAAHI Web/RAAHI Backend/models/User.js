@@ -1,129 +1,43 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const validator = require('validator');
 
 const userSchema = new mongoose.Schema({
-  // Basic user information
+  firstName: {
+    type: String,
+    required: [true, 'First name is required'],
+    trim: true
+  },
+  lastName: {
+    type: String,
+    required: [true, 'Last name is required'],
+    trim: true
+  },
   email: {
     type: String,
     required: [true, 'Email is required'],
     unique: false,
     lowercase: true,
-    validate: [validator.isEmail, 'Please provide a valid email']
+    trim: true,
+    match: [/\S+@\S+\.\S+/, 'Please provide a valid email address']
   },
   password: {
     type: String,
     required: [true, 'Password is required'],
-    minlength: 6,
-    select: false // Don't include password in queries by default
+    minlength: [6, 'Password must be at least 6 characters long'],
+    select: false // Don’t return password in queries by default
   },
-  firstName: {
+  phone: String,
+  role: {
     type: String,
-    required: [true, 'First name is required'],
-    trim: true,
-    maxlength: 50
+    enum: ['user', 'admin', 'tourist_department'],
+    default: 'user'
   },
-  lastName: {
+  firebaseUid: String,
+  travelPreferences: [String],
+  location: {
     type: String,
-    required: [true, 'Last name is required'],
-    trim: true,
-    maxlength: 50
-  },
-
-  // Profile information
-  avatar: {
-    type: String, // URL to profile picture
     default: null
   },
-  dateOfBirth: {
-    type: Date
-  },
-  phone: {
-    type: String,
-    validate: {
-      validator: function(v) {
-        return !v || validator.isMobilePhone(v);
-      },
-      message: 'Please provide a valid phone number'
-    }
-  },
-
-  // Tourism preferences for AI training
-  travelPreferences: {
-    interests: [{
-      type: String,
-      enum: ['adventure', 'culture', 'food', 'nature', 'history', 'art', 'nightlife', 'shopping', 'relaxation', 'photography']
-    }],
-    budgetRange: {
-      type: String,
-      enum: ['budget', 'mid-range', 'luxury']
-    },
-    travelStyle: {
-      type: String,
-      enum: ['solo', 'couple', 'family', 'group', 'business']
-    },
-    accommodationType: [{
-      type: String,
-      enum: ['hotel', 'hostel', 'apartment', 'resort', 'guesthouse', 'camping']
-    }],
-    preferredActivities: [{
-      type: String
-    }],
-    dietaryRestrictions: [{
-      type: String,
-      enum: ['vegetarian', 'vegan', 'halal', 'kosher', 'gluten-free', 'dairy-free', 'none']
-    }]
-  },
-
-  // Location and preferences
-  location: {
-    country: String,
-    city: String,
-    coordinates: {
-      type: {
-        type: String,
-        enum: ['Point']
-      },
-      coordinates: {
-        type: [Number], // [longitude, latitude]
-        validate: {
-          validator: function(coords) {
-            return !coords || (Array.isArray(coords) && coords.length === 2 &&
-                   coords.every(coord => typeof coord === 'number' &&
-                   coord >= -180 && coord <= 180));
-          },
-          message: 'Coordinates must be an array of two numbers [longitude, latitude] between -180 and 180'
-        }
-      }
-    }
-  },
-
-  // User activity data for AI training
-  activityHistory: [{
-    action: {
-      type: String,
-      enum: ['search', 'view', 'bookmark', 'review', 'visit']
-    },
-    targetType: {
-      type: String,
-      enum: ['destination', 'attraction', 'restaurant', 'hotel', 'activity']
-    },
-    targetId: {
-      type: mongoose.Schema.Types.ObjectId
-    },
-    timestamp: {
-      type: Date,
-      default: Date.now
-    },
-    duration: Number, // Time spent in seconds
-    rating: Number, // If applicable
-    metadata: {
-      type: Map,
-      of: mongoose.Schema.Types.Mixed
-    }
-  }],
-
-  // Account status and verification
   isEmailVerified: {
     type: Boolean,
     default: false
@@ -132,70 +46,29 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  role: {
-    type: String,
-    enum: ['user', 'guide', 'business', 'admin'],
-    default: 'user'
-  },
-
-  // Firebase UID for real-time features
-  firebaseUid: {
-    type: String,
-    unique: true,
-    sparse: true
-  },
-
-  // Timestamps
   lastLogin: Date,
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
-});
+}, { timestamps: true });
 
-// Indexes for geospatial queries and activity tracking
-userSchema.index({ 'location.coordinates': '2dsphere' }, { sparse: true });
-userSchema.index({ 'activityHistory.timestamp': -1 });
-
-// Pre-save middleware to hash password
-userSchema.pre('save', async function(next) {
+/**
+ * 🔑 Pre-save middleware for password hashing
+ */
+userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
 
-  // Check if password exists and is not empty
-  if (!this.password || typeof this.password !== 'string' || this.password.trim() === '') {
-    return next(new Error('Password is required and must be a non-empty string'));
-  }
-
   try {
-    this.password = await bcrypt.hash(this.password, 12);
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
     next();
-  } catch (error) {
-    next(new Error(`Password hashing failed: ${error.message}`));
+  } catch (err) {
+    next(err);
   }
 });
 
-// Pre-save middleware to update updatedAt
-userSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
-  next();
-});
-
-// Instance method to check password
-userSchema.methods.correctPassword = async function(candidatePassword, userPassword) {
+/**
+ * 🔑 Compare password method
+ */
+userSchema.methods.correctPassword = async function (candidatePassword, userPassword) {
   return await bcrypt.compare(candidatePassword, userPassword);
-};
-
-// Static method to find users for AI recommendations
-userSchema.statics.findSimilarUsers = function(userId, preferences) {
-  return this.find({
-    _id: { $ne: userId },
-    'travelPreferences.interests': { $in: preferences.interests },
-    'travelPreferences.budgetRange': preferences.budgetRange
-  }).limit(20);
 };
 
 module.exports = mongoose.model('User', userSchema);

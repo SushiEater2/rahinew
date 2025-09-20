@@ -180,8 +180,8 @@ const apiService = {
 
   // Emergency contact
   emergency: {
-    triggerPanic: async (location) => {
-      const response = await api.post('/emergency/panic', { location });
+    triggerPanic: async (panicData) => {
+      const response = await api.post('/emergency/panic', panicData);
       return response.data;
     },
     getEmergencyContacts: async () => {

@@ -19,6 +19,8 @@ const userRoutes = require('./routes/users');
 const destinationRoutes = require('./routes/destinations');
 const aiRoutes = require('./routes/ai');
 const healthRoutes = require('./routes/health');
+const emergencyRoutes = require('./routes/emergency');
+const geofenceRoutes = require('./routes/geofences');
 
 const app = express();
 
@@ -116,6 +118,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/destinations', destinationRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/emergency', emergencyRoutes);
+app.use('/api/geofences', geofenceRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -129,7 +133,9 @@ app.get('/', (req, res) => {
       auth: '/api/auth',
       users: '/api/users',
       destinations: '/api/destinations',
-      ai: '/api/ai'
+      ai: '/api/ai',
+      emergency: '/api/emergency',
+      geofences: '/api/geofences'
     }
   });
 });
