@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Phone
 import com.example.rahi2.data.User
 import com.example.rahi2.repository.AuthRepository
 import com.example.rahi2.repository.ProfileRepository
@@ -63,13 +64,26 @@ fun ProfileTab(onLogout: () -> Unit) {
 
     // Load user data
     LaunchedEffect(Unit) {
-        currentUser = profileRepository.getCurrentUser()
-        currentUser?.let { user ->
-            name = user.name
-            email = user.email
-            address = user.address
-            phone = user.phone
-        }
+        // First try to refresh user data from server
+        authRepository.refreshUserData().fold(
+            onSuccess = { refreshedUser ->
+                currentUser = refreshedUser
+                name = refreshedUser.name
+                email = refreshedUser.email
+                address = refreshedUser.address
+                phone = refreshedUser.phone
+            },
+            onFailure = {
+                // Fall back to cached data
+                currentUser = profileRepository.getCurrentUser()
+                currentUser?.let { user ->
+                    name = user.name
+                    email = user.email
+                    address = user.address
+                    phone = user.phone
+                }
+            }
+        )
     }
 
     fun handleSave() {
@@ -88,6 +102,11 @@ fun ProfileTab(onLogout: () -> Unit) {
                     isLoading = false
                     isEditing = false
                     currentUser = updatedUser
+                    // Update form fields with the latest data
+                    name = updatedUser.name
+                    email = updatedUser.email
+                    phone = updatedUser.phone
+                    address = updatedUser.address
                     successMessage = "Profile updated successfully!"
                 },
                 onFailure = { exception ->
@@ -196,6 +215,78 @@ fun ProfileTab(onLogout: () -> Unit) {
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(modifier = Modifier.height(16.dp))
+
+            // Emergency Contacts Section
+            currentUser?.let { user ->
+                val realContacts = user.emergencyContacts.filter {
+                    it.phone.isNotBlank() && it.phone != "911" && it.phone != "112" && it.phone != "+1234567890"
+                }
+
+                androidx.compose.material3.Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            "Emergency Contacts (for SOS)",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        if (realContacts.isEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "⚠️ No emergency contacts added. SOS functionality will be limited.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFFFF8F00)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "Add emergency contacts to enable SOS messaging and calling features.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        } else {
+                            realContacts.forEach { contact ->
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            contact.name,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        Text(
+                                            contact.phone,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.outline
+                                        )
+                                        if (contact.relationship.isNotBlank()) {
+                                            Text(
+                                                contact.relationship,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.outline
+                                            )
+                                        }
+                                    }
+                                    Icon(
+                                        Icons.Default.Phone,
+                                        contentDescription = "Emergency Contact",
+                                        tint = Color(0xFFD32F2F),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
             ElevatedButton(
                 onClick = {

@@ -58,13 +58,16 @@ fun AppNavHost(
         // Main shell with bottom tabs (Home, Profile, Settings)
         navigation(startDestination = NavRoute.Home.route, route = NavRoute.Main.route) {
             composable(NavRoute.Home.route) {
-                MainShellScreen(selectedRoute = NavRoute.Home.route, onNavigate = { route ->
-                    navController.navigate(route) {
-                        launchSingleTop = true
-                        restoreState = true
-                        popUpTo(NavRoute.Home.route) { saveState = true }
-                    }
-                },
+                MainShellScreen(
+                    selectedRoute = NavRoute.Home.route,
+                    onNavigate = { route ->
+                        navController.navigate(route) {
+                            launchSingleTop = true
+                            restoreState = true
+                            popUpTo(NavRoute.Home.route) { saveState = true }
+                        }
+                    },
+                    onSosClick = { navController.navigate(NavRoute.SosDetails.route) },
                     content = { HomeTab(
                         onReportIncident = { navController.navigate(NavRoute.IncidentReport.route) },
                         onOpenMap = { navController.navigate(NavRoute.Map.route) },
@@ -74,29 +77,43 @@ fun AppNavHost(
                 )
             }
             composable(NavRoute.Profile.route) {
-                MainShellScreen(selectedRoute = NavRoute.Profile.route, onNavigate = { route ->
-                    navController.navigate(route) {
-                        launchSingleTop = true
-                        restoreState = true
-                        popUpTo(NavRoute.Home.route) { saveState = true }
+                MainShellScreen(
+                    selectedRoute = NavRoute.Profile.route,
+                    onNavigate = { route ->
+                        navController.navigate(route) {
+                            launchSingleTop = true
+                            restoreState = true
+                            popUpTo(NavRoute.Home.route) { saveState = true }
+                        }
+                    },
+                    onSosClick = { navController.navigate(NavRoute.SosDetails.route) },
+                    content = {
+                        ProfileTab(onLogout = {
+                            navController.navigate(NavRoute.Auth.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        })
                     }
-                }, content = { ProfileTab(onLogout = {
-                    navController.navigate(NavRoute.Auth.route) {
-                        popUpTo(0) { inclusive = true }
-                    }
-                }) })
+                )
             }
             composable(NavRoute.Settings.route) {
-                MainShellScreen(selectedRoute = NavRoute.Settings.route, onNavigate = { route ->
-                    navController.navigate(route) {
-                        launchSingleTop = true
-                        restoreState = true
-                        popUpTo(NavRoute.Home.route) { saveState = true }
+                MainShellScreen(
+                    selectedRoute = NavRoute.Settings.route,
+                    onNavigate = { route ->
+                        navController.navigate(route) {
+                            launchSingleTop = true
+                            restoreState = true
+                            popUpTo(NavRoute.Home.route) { saveState = true }
+                        }
+                    },
+                    onSosClick = { navController.navigate(NavRoute.SosDetails.route) },
+                    content = {
+                        SettingsScreen(
+                            selectedLanguage = currentLanguage,
+                            onChangeLanguage = onChangeLanguage
+                        )
                     }
-                }, content = { SettingsScreen(
-                    selectedLanguage = currentLanguage,
-                    onChangeLanguage = onChangeLanguage
-                ) })
+                )
             }
         }
 

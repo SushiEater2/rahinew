@@ -6,15 +6,18 @@ import com.example.rahi2.data.User
 import com.example.rahi2.data.EmergencyContact
 import com.example.rahi2.data.LocationSettings
 import com.example.rahi2.data.NotificationSettings
+import com.example.rahi2.api.NetworkClient
+import com.example.rahi2.api.models.ProfileUpdateRequest
 import kotlinx.coroutines.delay
 
 class ProfileRepository(private val context: Context) {
 
+    private val networkClient = NetworkClient.getInstance(context)
+    private val profileService = networkClient.profileService
+    private val authRepository = AuthRepository(context)
+
     private val sharedPrefs: SharedPreferences =
         context.getSharedPreferences("raahi_profile", Context.MODE_PRIVATE)
-
-    private val authPrefs: SharedPreferences =
-        context.getSharedPreferences("raahi_auth", Context.MODE_PRIVATE)
 
     suspend fun updateProfile(
         name: String,
@@ -22,7 +25,27 @@ class ProfileRepository(private val context: Context) {
         address: String
     ): Result<User> {
         return try {
-            delay(800) // Simulate network call
+            // Try to update via API first
+            val request = ProfileUpdateRequest(name = name, phone = phone, address = address)
+            val response = profileService.updateProfile(request)
+
+            if (response.isSuccessful && response.body()?.success == true) {
+                val updatedApiUser = response.body()!!.data!!.user
+                val updatedUser = convertApiUserToDataUser(updatedApiUser)
+
+                // Save to local storage
+                saveUserProfile(updatedUser)
+
+                // Also update auth repository
+                authRepository.saveCurrentUser(updatedUser)
+
+                Result.success(updatedUser)
+            } else {
+                throw Exception(response.body()?.error ?: "Failed to update profile")
+            }
+        } catch (e: Exception) {
+            // Fallback to local update for development/offline mode
+            delay(800)
 
             val currentUser = getCurrentUser()
             if (currentUser != null) {
@@ -34,17 +57,18 @@ class ProfileRepository(private val context: Context) {
                 )
 
                 saveUserProfile(updatedUser)
+                // Also update auth repository to keep data consistent
+                authRepository.saveCurrentUser(updatedUser)
                 Result.success(updatedUser)
             } else {
                 Result.failure(Exception("User not found"))
             }
-        } catch (e: Exception) {
-            Result.failure(e)
         }
     }
 
     suspend fun updateEmergencyContacts(contacts: List<EmergencyContact>): Result<List<EmergencyContact>> {
         return try {
+            // TODO: Implement API call when backend endpoint is available
             delay(600)
 
             val currentUser = getCurrentUser()
@@ -55,6 +79,7 @@ class ProfileRepository(private val context: Context) {
                 )
 
                 saveUserProfile(updatedUser)
+                authRepository.saveCurrentUser(updatedUser)
                 Result.success(contacts)
             } else {
                 Result.failure(Exception("User not found"))
@@ -66,6 +91,7 @@ class ProfileRepository(private val context: Context) {
 
     suspend fun updateLocationSettings(settings: LocationSettings): Result<LocationSettings> {
         return try {
+            // TODO: Implement API call when backend endpoint is available
             delay(500)
 
             val currentUser = getCurrentUser()
@@ -76,6 +102,7 @@ class ProfileRepository(private val context: Context) {
                 )
 
                 saveUserProfile(updatedUser)
+                authRepository.saveCurrentUser(updatedUser)
                 Result.success(settings)
             } else {
                 Result.failure(Exception("User not found"))
@@ -87,6 +114,7 @@ class ProfileRepository(private val context: Context) {
 
     suspend fun updateNotificationSettings(settings: NotificationSettings): Result<NotificationSettings> {
         return try {
+            // TODO: Implement API call when backend endpoint is available
             delay(500)
 
             val currentUser = getCurrentUser()
@@ -97,6 +125,7 @@ class ProfileRepository(private val context: Context) {
                 )
 
                 saveUserProfile(updatedUser)
+                authRepository.saveCurrentUser(updatedUser)
                 Result.success(settings)
             } else {
                 Result.failure(Exception("User not found"))
@@ -107,38 +136,39 @@ class ProfileRepository(private val context: Context) {
     }
 
     fun getCurrentUser(): User? {
-        // Get user data from auth repository (which has the actual login data)
-        val authRepository = AuthRepository(context)
-        val baseUser = authRepository.getCurrentUser()
+        // Always get the primary user data from AuthRepository first
+        // This ensures we have the latest registration/login data
+        val baseUser = authRepository.getCurrentUser() ?: return null
 
-        return baseUser?.let { user ->
-            // Enhance with profile-specific data from profile prefs
-            val savedName = sharedPrefs.getString("user_name", user.name)
-            val savedPhone = sharedPrefs.getString("user_phone", user.phone)
-            val savedAddress = sharedPrefs.getString("user_address", user.address)
+        // Enhance with any profile-specific overrides from profile prefs (if any)
+        val profileName = sharedPrefs.getString("user_name", null)
+        val profilePhone = sharedPrefs.getString("user_phone", null)
+        val profileAddress = sharedPrefs.getString("user_address", null)
 
-            // Mock emergency contacts for now
-            val emergencyContacts = listOf(
-                EmergencyContact("Emergency Services", "911", "Emergency"),
-                EmergencyContact("Family Member", "+1234567890", "Family")
-            )
-
-            user.copy(
-                name = savedName ?: user.name,
-                phone = savedPhone ?: user.phone,
-                address = savedAddress ?: user.address,
-                emergencyContacts = emergencyContacts,
-                locationSettings = LocationSettings(
-                    shareLocation = sharedPrefs.getBoolean("share_location", true),
-                    emergencyLocationSharing = sharedPrefs.getBoolean("emergency_location", true)
-                ),
-                notificationSettings = NotificationSettings(
-                    pushNotifications = sharedPrefs.getBoolean("push_notifications", true),
-                    emailNotifications = sharedPrefs.getBoolean("email_notifications", false),
-                    emergencyAlerts = sharedPrefs.getBoolean("emergency_alerts", true)
+        // Use profile data if it exists and is different, otherwise use auth data
+        return baseUser.copy(
+            name = profileName?.takeIf { it.isNotBlank() } ?: baseUser.name,
+            phone = profilePhone?.takeIf { it.isNotBlank() } ?: baseUser.phone,
+            address = profileAddress?.takeIf { it.isNotBlank() } ?: baseUser.address,
+            // Add mock emergency contacts for now
+            emergencyContacts = if (baseUser.emergencyContacts.isEmpty()) {
+                listOf(
+                    EmergencyContact("Emergency Services", "112", "Emergency"),
+                    EmergencyContact("Demo Contact", "+1234567890", "Family")
                 )
+            } else {
+                baseUser.emergencyContacts
+            },
+            locationSettings = LocationSettings(
+                shareLocation = sharedPrefs.getBoolean("share_location", true),
+                emergencyLocationSharing = sharedPrefs.getBoolean("emergency_location", true)
+            ),
+            notificationSettings = NotificationSettings(
+                pushNotifications = sharedPrefs.getBoolean("push_notifications", true),
+                emailNotifications = sharedPrefs.getBoolean("email_notifications", false),
+                emergencyAlerts = sharedPrefs.getBoolean("emergency_alerts", true)
             )
-        }
+        )
     }
 
     private fun saveUserProfile(user: User) {
@@ -154,13 +184,37 @@ class ProfileRepository(private val context: Context) {
             .putBoolean("email_notifications", user.notificationSettings.emailNotifications)
             .putBoolean("emergency_alerts", user.notificationSettings.emergencyAlerts)
             .apply()
+    }
 
-        // Also sync back to auth prefs to keep data consistent
-        authPrefs.edit()
-            .putString("user_name", user.name)
-            .putString("user_phone", user.phone)
-            .putString("user_address", user.address)
-            .apply()
+    // Convert API User model to Data User model
+    private fun convertApiUserToDataUser(apiUser: com.example.rahi2.api.models.User): User {
+        return User(
+            id = apiUser.id,
+            name = apiUser.name,
+            email = apiUser.email,
+            phone = apiUser.phone ?: "",
+            address = apiUser.address ?: "",
+            profilePicture = apiUser.profilePicture,
+            emergencyContacts = apiUser.emergencyContacts.map { apiContact ->
+                EmergencyContact(
+                    name = apiContact.name,
+                    phone = apiContact.phone,
+                    relationship = apiContact.relationship ?: ""
+                )
+            },
+            locationSettings = LocationSettings(
+                shareLocation = apiUser.locationSettings.shareLocation,
+                emergencyLocationSharing = apiUser.locationSettings.emergencyLocationSharing
+            ),
+            notificationSettings = NotificationSettings(
+                pushNotifications = apiUser.notificationSettings.pushNotifications,
+                emailNotifications = apiUser.notificationSettings.emailNotifications,
+                emergencyAlerts = apiUser.notificationSettings.emergencyAlerts
+            ),
+            lastLogin = apiUser.lastLogin,
+            createdAt = apiUser.createdAt,
+            updatedAt = apiUser.updatedAt
+        )
     }
 
     fun getProfileCompleteness(): Int {
