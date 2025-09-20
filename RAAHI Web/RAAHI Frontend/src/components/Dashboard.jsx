@@ -4,8 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import apiService from '../services/api';
 import CleanMap from './CleanMap';
 import PanicButton from './Shared/PanicButton';
-import MapDiagnostics from './MapDiagnostics';
-import MapErrorBoundary from './MapErrorBoundary';
 import '../styles/modern-dashboard.css';
 import '../styles/clean-map.css';
 
@@ -438,22 +436,16 @@ const Dashboard = () => {
                     </p>
                   </div>
                   
-                  {/* Map Diagnostics */}
-                  <MapDiagnostics />
-                  
-                  <div className="map-container" style={{ 
+                  <div className="map-container" style={{
                     width: '100%',
                     borderRadius: '12px',
                     overflow: 'hidden',
                     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
                     border: '1px solid #e2e8f0'
                   }}>
-                    <MapErrorBoundary>
-                      <CleanMap 
-                        onLocationUpdate={handleLocationUpdate}
-                        showGeofencing={true}
-                      />
-                    </MapErrorBoundary>
+                    <CleanMap 
+                      onLocationUpdate={handleLocationUpdate}
+                    />
                   </div>
                   
                   <div className="map-info" style={{ 
