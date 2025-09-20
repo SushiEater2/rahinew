@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import com.example.rahi2.ui.screens.AuthScreen
+import com.example.rahi2.ui.screens.GeofenceManagementScreen
 import com.example.rahi2.ui.screens.IncidentReportScreen
 import com.example.rahi2.ui.screens.MainShellScreen
 import com.example.rahi2.ui.screens.SettingsScreen
@@ -67,7 +68,8 @@ fun AppNavHost(
                     content = { HomeTab(
                         onReportIncident = { navController.navigate(NavRoute.IncidentReport.route) },
                         onOpenMap = { navController.navigate(NavRoute.Map.route) },
-                        onNavigateToSosDetails = { navController.navigate(NavRoute.SosDetails.route) } // Added navigation to SOS Details
+                        onNavigateToSosDetails = { navController.navigate(NavRoute.SosDetails.route) },
+                        onNavigateToGeofenceManagement = { navController.navigate(NavRoute.GeofenceManagement.route) }
                     ) }
                 )
             }
@@ -105,12 +107,21 @@ fun AppNavHost(
 
         // Map as a standalone screen (from Home)
         composable(NavRoute.Map.route) {
-            MapTab() // Assuming MapTab doesn't need specific parameters like NavController for this usage
+            MapTab(
+                onNavigateToGeofenceManagement = {
+                    navController.navigate(NavRoute.GeofenceManagement.route)
+                }
+            )
         }
         
         // SOS Details Screen
         composable(NavRoute.SosDetails.route) {
             SosDetailsScreen(navController = navController)
+        }
+
+        // Geofence Management Screen
+        composable(NavRoute.GeofenceManagement.route) {
+            GeofenceManagementScreen(onBack = { navController.popBackStack() })
         }
     }
 }

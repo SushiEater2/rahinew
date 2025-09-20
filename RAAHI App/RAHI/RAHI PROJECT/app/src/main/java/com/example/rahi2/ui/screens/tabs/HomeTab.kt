@@ -14,10 +14,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Report
-import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.Sos
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -36,7 +37,8 @@ import com.example.rahi2.ui.strings.LocalStrings
 fun HomeTab(
     onReportIncident: () -> Unit, 
     onOpenMap: () -> Unit,
-    onNavigateToSosDetails: () -> Unit // New navigation lambda
+	onNavigateToSosDetails: () -> Unit,
+	onNavigateToGeofenceManagement: (() -> Unit)? = null
 ) {
 	val context = LocalContext.current // Still needed for LocalStrings
     val currentStrings = LocalStrings.current
@@ -44,6 +46,7 @@ fun HomeTab(
 	val sosAccentColor = Color(0xFFFF3D00)
 	val mapAccentColor = Color(0xFF42A5F5)
 	val reportAccentColor = Color(0xFF66BB6A)
+	val geofenceAccentColor = Color(0xFF9C27B0)
 
 	Column(
 		modifier = Modifier
@@ -81,6 +84,25 @@ fun HomeTab(
 			onClick = onOpenMap
 		)
 		Spacer(modifier = Modifier.height(12.dp))
+
+		// Add geofence management card if navigation is provided
+		onNavigateToGeofenceManagement?.let { navigate ->
+			FeatureCard(
+				title = "Geofence Management",
+				accentColor = geofenceAccentColor,
+				icon = {
+					Icon(
+						Icons.Default.LocationOn,
+						contentDescription = null,
+						tint = geofenceAccentColor,
+						modifier = Modifier.size(36.dp)
+					)
+				},
+				onClick = navigate
+			)
+			Spacer(modifier = Modifier.height(12.dp))
+		}
+
 		FeatureCard(
 			title = currentStrings.homeReportIncident,
 			accentColor = reportAccentColor,

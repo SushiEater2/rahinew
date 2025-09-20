@@ -10,4 +10,5 @@ sealed class NavRoute(val route: String) {
     object IncidentReport : NavRoute("incident_report")
     object Map : NavRoute("map") // From Home to a standalone Map screen
     object SosDetails : NavRoute("sos_details") // New route for SOS details
+    object GeofenceManagement : NavRoute("geofence_management") // New route for geofence management
 }

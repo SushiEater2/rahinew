@@ -42,19 +42,37 @@ android {
 
 dependencies {
     implementation("com.google.maps.android:android-maps-utils:3.19.0")
-    implementation(platform("androidx.compose:compose-bom:2025.09.00")) // Or your chosen BoM
+    implementation(platform("androidx.compose:compose-bom:2025.09.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
-    implementation("androidx.navigation:navigation-compose:2.9.4") // Or latest
-    implementation("com.google.maps.android:maps-compose:6.10.0") // Or latest maps-compose
-    implementation("com.google.android.gms:play-services-maps:19.2.0") // Or latest play-services-maps
+    implementation("androidx.navigation:navigation-compose:2.9.4")
+    implementation("com.google.maps.android:maps-compose:6.10.0")
+    implementation("com.google.android.gms:play-services-maps:19.2.0")
+    implementation("com.google.android.gms:play-services-location:21.3.0")
 
-    // If you need user's current location:
-    implementation("com.google.android.gms:play-services-location:21.3.0") // Or latest
-    implementation("androidx.compose.ui:ui:1.9.1") // Ensure you have base compose UI
-    implementation("com.google.maps.android:maps-compose:6.10.0") // Google Maps Compose Library
-    implementation("com.google.android.gms:play-services-maps:19.2.0") // Google Play Services for Maps
-    implementation("com.google.android.gms:play-services-location:21.3.0") // Google Play Services for Location
+    // Notifications for geofencing
+    implementation("androidx.core:core:1.12.0")
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // HTTP client for backend communication
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    // JSON serialization
+    implementation("com.google.code.gson:gson:2.10.1")
+
+    // Coroutines for async operations
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    // ViewModel and LiveData
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
+
+    // Secure storage for tokens
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
