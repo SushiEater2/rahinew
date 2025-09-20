@@ -1,18 +1,39 @@
 const express = require('express');
 const { optionalAuthWithGuest } = require('../middleware/auth');
 const admin = require('firebase-admin');
+const databaseManager = require('../config/database');
 const router = express.Router();
 
-// Get Firebase Admin services (lazy initialization)
+// Get Firebase Admin services (with improved error handling)
 const getFirebaseServices = () => {
   try {
+    // First check if Firebase admin is initialized
+    if (admin.apps.length === 0) {
+      console.error('❌ Firebase Admin SDK not initialized');
+      return null;
+    }
+    
+    // Try to get services from database manager first
+    try {
+      const services = databaseManager.getFirebaseServices();
+      if (services) {
+        return services;
+      }
+    } catch (dbError) {
+      console.warn('⚠️  Database manager Firebase services not available:', dbError.message);
+    }
+    
+    // Fallback to direct admin services
     return {
-      db: admin.database(),
+      database: admin.database(),
       firestore: admin.firestore(),
-      auth: admin.auth()
+      auth: admin.auth(),
+      storage: admin.storage(),
+      messaging: admin.messaging()
     };
   } catch (error) {
-    console.error('Firebase services not available:', error.message);
+    console.error('❌ Firebase services not available:', error.message);
+    console.error('💡 Make sure Firebase is properly configured in your .env file');
     return null;
   }
 };
@@ -206,30 +227,35 @@ router.put('/panic-alerts/:id/status', optionalAuthWithGuest, async (req, res) =
       });
     }
     
-    // Update the panic alert in Firebase
-    const db = getFirebaseDB();
-    if (!db) {
+    // Get Firebase Admin services
+    const firebase = getFirebaseServices();
+    if (!firebase) {
       return res.status(503).json({
         success: false,
-        message: 'Firebase database not available'
+        message: 'Firebase services unavailable'
       });
     }
     
-    const alertRef = db.ref(`panic_alerts/${id}`);
-    const snapshot = await alertRef.once('value');
+    // Use Firestore to find and update the panic alert
+    // Since we're using collection group queries, we need to find the document first
+    const alertQuery = firebase.firestore.collectionGroup('panic_alerts').where('alertId', '==', id);
+    const querySnapshot = await alertQuery.get();
     
-    if (!snapshot.exists()) {
+    if (querySnapshot.empty) {
       return res.status(404).json({
         success: false,
         message: 'Panic alert not found'
       });
     }
     
-    await alertRef.update({
+    // Update the first matching document (should be unique anyway)
+    const doc = querySnapshot.docs[0];
+    await doc.ref.update({
       status: status,
       notes: notes || '',
-      updatedAt: new Date().toISOString(),
-      updatedBy: req.user ? req.user.email : 'system'
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedBy: req.user ? req.user.email : 'system',
+      resolved: status === 'resolved' || status === 'false_alarm'
     });
     
     console.log(`📋 Panic alert ${id} status updated to: ${status}`);
@@ -251,14 +277,105 @@ router.put('/panic-alerts/:id/status', optionalAuthWithGuest, async (req, res) =
   }
 });
 
+// Test endpoint for panic button (no auth required)
+router.post('/test-panic', async (req, res) => {
+  try {
+    console.log('🧪 Testing panic button functionality...');
+    
+    // Test data
+    const testLocation = {
+      latitude: 28.6139, // Delhi coordinates
+      longitude: 77.2090
+    };
+    
+    // Get Firebase Admin services
+    const firebase = getFirebaseServices();
+    if (!firebase) {
+      return res.status(503).json({
+        success: false,
+        message: 'Firebase services unavailable - check Firebase configuration'
+      });
+    }
+    
+    const alertId = `test_panic_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const userId = `test_user_${Date.now()}`;
+    
+    // Create test panic alert
+    const testAlert = {
+      latitude: testLocation.latitude,
+      longitude: testLocation.longitude,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      userId: userId,
+      userEmail: 'test@panic.com',
+      userName: 'Test User',
+      status: 'active',
+      resolved: false,
+      userAgent: 'Test Agent',
+      isAnonymous: true,
+      alertId: alertId,
+      isTestAlert: true
+    };
+    
+    // Save to Firebase
+    const userDocRef = firebase.firestore.collection('users').doc(userId);
+    const panicAlertRef = userDocRef.collection('panic_alerts').doc(alertId);
+    
+    await userDocRef.set({
+      uid: userId,
+      email: testAlert.userEmail,
+      displayName: testAlert.userName,
+      isAnonymous: true,
+      isTestUser: true,
+      lastActive: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    
+    await panicAlertRef.set(testAlert);
+    
+    console.log('✅ Test panic alert created successfully');
+    
+    res.json({
+      success: true,
+      message: '🚨 Panic button test successful!',
+      testAlert: {
+        alertId: alertId,
+        userId: userId,
+        location: testLocation,
+        firestorePath: `users/${userId}/panic_alerts/${alertId}`
+      },
+      firebase: {
+        available: true,
+        services: ['firestore', 'database', 'auth']
+      },
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Panic button test failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Panic button test failed',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+      firebase: {
+        available: false,
+        error: error.message
+      }
+    });
+  }
+});
+
 // Test endpoint to check Firebase connection
 router.get('/test-firebase', (req, res) => {
   try {
+    const firebase = getFirebaseServices();
+    
     res.json({
       success: true,
       message: 'Firebase connection is working',
       timestamp: new Date().toISOString(),
-      databaseURL: admin.app().options.databaseURL || 'Not configured'
+      services: firebase ? Object.keys(firebase) : [],
+      databaseURL: admin.app().options.databaseURL || 'Not configured',
+      projectId: admin.app().options.projectId || 'Not configured'
     });
   } catch (error) {
     res.status(500).json({

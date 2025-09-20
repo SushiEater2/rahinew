@@ -71,10 +71,13 @@ const PanicButton = () => {
     setIsTriggering(true);
     setIsWarning(false);
     
+    let location = null;
+    let backendSuccess = false;
+    
     try {
       // Get user's location
       console.log('📍 Requesting user location...');
-      let location = null;
+      
       if (navigator.geolocation) {
         try {
           const position = await new Promise((resolve, reject) => {
@@ -92,14 +95,12 @@ const PanicButton = () => {
           console.log(`✅ Location acquired: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)} (±${location.accuracy.toFixed(0)}m)`);
         } catch (error) {
           console.warn('⚠️ Could not get precise location:', error.message);
-          // Use approximate location if available
           location = {
             latitude: null,
             longitude: null,
             timestamp: new Date().toISOString(),
             error: 'Location access denied or unavailable'
           };
-          console.log('❌ Using fallback location (0, 0)');
         }
       } else {
         console.warn('❌ Geolocation not supported by this browser');
@@ -111,65 +112,117 @@ const PanicButton = () => {
         };
       }
       
-      // Send panic alert through backend API to Firebase Admin
-      console.log('🚨 Sending panic alert through backend API...');
-      
-      // Prepare panic data for backend
+      // Prepare panic data
       const panicData = {
         email: user?.email || 'anonymous@guest.com',
         location: {
           latitude: location?.latitude || 0,
-          longitude: location?.longitude || 0
+          longitude: location?.longitude || 0,
+          accuracy: location?.accuracy || 'unknown',
+          timestamp: location?.timestamp || new Date().toISOString()
         },
         timestamp: new Date().toISOString(),
         userAgent: navigator.userAgent,
         status: 'active',
-        userId: user?.id || null
+        userId: user?.id || null,
+        deviceInfo: {
+          platform: navigator.platform,
+          language: navigator.language,
+          userAgent: navigator.userAgent
+        }
       };
       
-      console.log('📍 Final panic data being sent:', {
+      console.log('📍 Panic data prepared:', {
         ...panicData,
-        locationStatus: location?.latitude && location?.longitude ? 'PRECISE_LOCATION' : 'FALLBACK_LOCATION',
-        locationAccuracy: location?.accuracy ? `±${location.accuracy.toFixed(0)}m` : 'Unknown'
+        locationStatus: location?.latitude && location?.longitude ? 'PRECISE_LOCATION' : 'FALLBACK_LOCATION'
       });
       
-      // Send through backend API
-      const response = await apiService.emergency.triggerPanic(panicData);
-      
-      console.log('✅ Backend response:', response);
-      
-      if (response && response.success) {
-        // Show success message with location details
-        const locationInfo = response.location.latitude && response.location.longitude
-          ? `📍 LOCATION SENT: ${response.location.latitude.toFixed(6)}, ${response.location.longitude.toFixed(6)}`
-          : '⚠️ LOCATION: Unable to capture precise location';
+      // Try to send through backend API
+      try {
+        console.log('🚨 Attempting to send panic alert through backend API...');
+        const response = await apiService.emergency.triggerPanic(panicData);
         
-        const alertMsg = `🚨 EMERGENCY ALERT SENT!\n\n${locationInfo}\n\n✅ Alert ID: ${response.alertId}\n👤 User ID: ${response.userId}\n🗂️ Saved to: ${response.firestorePath}\n\n📞 Emergency services notified via Firebase!`;
-        alert(alertMsg);
+        console.log('✅ Backend response received:', response);
         
-        // Also log to console for debugging
-        console.log('🚨 PANIC ALERT SENT WITH LOCATION:', {
-          alertId: response.alertId,
-          location: response.location,
-          firestorePath: response.firestorePath,
+        if (response && (response.success || response.alertId)) {
+          backendSuccess = true;
+          const locationInfo = (response.location?.latitude && response.location?.longitude)
+            ? `📍 LOCATION: ${response.location.latitude.toFixed(6)}, ${response.location.longitude.toFixed(6)}`
+            : `📍 LOCATION: ${location?.latitude ? location.latitude.toFixed(6) : 'Unknown'}, ${location?.longitude ? location.longitude.toFixed(6) : 'Unknown'}`;
+          
+          const alertMsg = `🚨 EMERGENCY ALERT SENT SUCCESSFULLY!\n\n${locationInfo}\n\n✅ Alert ID: ${response.alertId || 'Generated'}\n👤 User: ${panicData.email}\n⏰ Time: ${new Date().toLocaleString()}\n\n📞 Emergency services have been notified!\n\n🔗 Backend: Connected & Working`;
+          alert(alertMsg);
+          
+          console.log('🚨 PANIC ALERT SENT SUCCESSFULLY:', {
+            alertId: response.alertId,
+            location: response.location || panicData.location,
+            timestamp: new Date().toISOString(),
+            backendStatus: 'SUCCESS'
+          });
+        } else {
+          throw new Error(response?.message || 'Invalid backend response');
+        }
+      } catch (apiError) {
+        console.warn('⚠️ Backend API failed, using fallback mode:', apiError.message);
+        
+        // Fallback: Save to localStorage and show manual instructions
+        const fallbackData = {
+          ...panicData,
+          alertId: `LOCAL_${Date.now()}`,
+          saved: 'localStorage',
           timestamp: new Date().toISOString()
-        });
-      } else {
-        throw new Error(response?.message || 'Unknown error occurred');
+        };
+        
+        // Store in localStorage as backup
+        const existingAlerts = JSON.parse(localStorage.getItem('panicAlerts') || '[]');
+        existingAlerts.push(fallbackData);
+        localStorage.setItem('panicAlerts', JSON.stringify(existingAlerts));
+        
+        const locationInfo = location?.latitude && location?.longitude
+          ? `📍 LOCATION: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`
+          : '📍 LOCATION: Unable to determine precise location';
+        
+        const fallbackMsg = `🚨 EMERGENCY ALERT ACTIVATED!\n\n${locationInfo}\n\n⚠️ Alert ID: ${fallbackData.alertId}\n👤 User: ${panicData.email}\n⏰ Time: ${new Date().toLocaleString()}\n\n📱 Data saved locally for backup\n🔗 Backend: Offline (using fallback mode)\n\n📞 CALLING EMERGENCY SERVICES NOW...`;
+        alert(fallbackMsg);
+        
+        console.log('🚨 PANIC ALERT SAVED LOCALLY (FALLBACK):', fallbackData);
       }
       
       setHasTriggered(true);
       
-      // Make the emergency call
-      window.location.href = 'tel:112';
-      
     } catch (error) {
-      console.error('Failed to send panic alert:', error);
-      // Still make the emergency call even if backend fails
-      window.location.href = 'tel:112';
+      console.error('❌ Critical error in panic system:', error);
+      
+      // Emergency fallback - always try to help the user
+      const criticalMsg = `🚨 CRITICAL EMERGENCY ALERT!\n\n⚠️ System Error: ${error.message}\n⏰ Time: ${new Date().toLocaleString()}\n\n📞 CALLING EMERGENCY SERVICES NOW...\n\n🆘 If call doesn't work, manually dial:\n• Police: 100\n• Ambulance: 108\n• Fire: 101\n• Tourist Helpline: 1363`;
+      alert(criticalMsg);
+      
       setHasTriggered(true);
     } finally {
       setIsTriggering(false);
+      
+      // Always try to make emergency call regardless of backend status
+      console.log('📞 Initiating emergency call...');
+      
+      // Multiple fallback numbers for different countries
+      const emergencyNumbers = ['112', '100', '911', '999'];
+      let callAttempted = false;
+      
+      for (const number of emergencyNumbers) {
+        try {
+          window.location.href = `tel:${number}`;
+          callAttempted = true;
+          console.log(`✅ Emergency call attempted: ${number}`);
+          break;
+        } catch (callError) {
+          console.warn(`❌ Failed to call ${number}:`, callError);
+        }
+      }
+      
+      if (!callAttempted) {
+        console.error('❌ All emergency call attempts failed');
+        alert('⚠️ Unable to auto-dial emergency services.\n\nManually call:\n• 112 (International)\n• 100 (Police)\n• 108 (Ambulance)');
+      }
       
       // Reset after 2 minutes
       setTimeout(() => {

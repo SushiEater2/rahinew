@@ -1,10 +1,216 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { GoogleMap, LoadScript, Marker, InfoWindow } from '@react-google-maps/api';
+import { GoogleMap, LoadScript, Marker, InfoWindow, Circle } from '@react-google-maps/api';
+import { GEOFENCES } from '../config/geofences';
 
-const CleanMap = ({ onLocationUpdate }) => {
+// Fallback component when Google Maps fails to load
+const FallbackMap = ({ userLocation, touristAttractions, onLocationUpdate, geofences }) => {
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by this browser.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const userPos = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
+        
+        if (onLocationUpdate) {
+          onLocationUpdate({
+            lat: userPos.lat,
+            lng: userPos.lng,
+            address: `Live Location: ${userPos.lat.toFixed(6)}, ${userPos.lng.toFixed(6)}`
+          });
+        }
+        
+        alert(`Location found!\n\nLatitude: ${userPos.lat.toFixed(6)}\nLongitude: ${userPos.lng.toFixed(6)}`);
+      },
+      (error) => {
+        alert(`Location error: ${error.message}`);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000
+      }
+    );
+  };
+
+  return (
+    <div style={{
+      width: '100%',
+      height: '600px',
+      backgroundColor: '#f1f5f9',
+      border: '2px dashed #cbd5e1',
+      borderRadius: '12px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      position: 'relative',
+      backgroundImage: `
+        radial-gradient(circle at 25% 25%, #e2e8f0 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, #cbd5e1 0%, transparent 50%)
+      `
+    }}>
+      {/* Fallback Map Header */}
+      <div style={{
+        textAlign: 'center',
+        marginBottom: '2rem',
+        zIndex: 1
+      }}>
+        <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🗺️</div>
+        <h3 style={{ 
+          margin: '0 0 0.5rem 0', 
+          color: '#1e293b', 
+          fontSize: '1.5rem',
+          fontWeight: '600'
+        }}>
+          Interactive Map
+        </h3>
+        <p style={{
+          margin: '0',
+          color: '#64748b',
+          fontSize: '1rem',
+          maxWidth: '400px'
+        }}>
+          Google Maps is currently unavailable. Using fallback location services.
+        </p>
+      </div>
+
+      {/* Location Button */}
+      <button
+        onClick={getCurrentLocation}
+        style={{
+          padding: '12px 24px',
+          backgroundColor: '#3b82f6',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          fontSize: '1rem',
+          fontWeight: '600',
+          cursor: 'pointer',
+          boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+          transition: 'all 0.2s ease',
+          marginBottom: '2rem'
+        }}
+        onMouseOver={(e) => {
+          e.target.style.transform = 'translateY(-2px)';
+          e.target.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.4)';
+        }}
+        onMouseOut={(e) => {
+          e.target.style.transform = 'translateY(0)';
+          e.target.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+        }}
+      >
+        📍 Get My Location
+      </button>
+
+      {/* Tourist Attractions List */}
+      <div style={{
+        background: 'rgba(255, 255, 255, 0.9)',
+        borderRadius: '12px',
+        padding: '1.5rem',
+        maxWidth: '500px',
+        width: '90%',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.2)'
+      }}>
+        <h4 style={{
+          margin: '0 0 1rem 0',
+          color: '#1e293b',
+          fontSize: '1.1rem',
+          fontWeight: '600'
+        }}>
+          🎯 Popular Tourist Attractions in Delhi
+        </h4>
+        <div style={{
+          display: 'grid',
+          gap: '0.75rem',
+          maxHeight: '200px',
+          overflowY: 'auto'
+        }}>
+          {touristAttractions.map((attraction) => (
+            <div key={attraction.id} style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '0.5rem 0.75rem',
+              backgroundColor: '#f8fafc',
+              borderRadius: '6px',
+              fontSize: '0.9rem'
+            }}>
+              <span style={{ fontWeight: '600', color: '#374151' }}>
+                {attraction.name}
+              </span>
+              <span style={{ 
+                color: '#64748b', 
+                fontSize: '0.8rem',
+                fontFamily: 'monospace'
+              }}>
+                {attraction.lat.toFixed(4)}, {attraction.lng.toFixed(4)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Geofences Info */}
+      {geofences && geofences.length > 0 && (
+        <div style={{
+          marginTop: '1.5rem',
+          background: 'rgba(239, 68, 68, 0.1)',
+          borderRadius: '8px',
+          padding: '1rem',
+          border: '1px solid rgba(239, 68, 68, 0.2)',
+          maxWidth: '500px',
+          width: '90%'
+        }}>
+          <h5 style={{
+            margin: '0 0 0.5rem 0',
+            color: '#dc2626',
+            fontSize: '0.9rem',
+            fontWeight: '600'
+          }}>
+            🚧 Active Monitoring Zones ({geofences.length})
+          </h5>
+          <div style={{ fontSize: '0.8rem', color: '#991b1b' }}>
+            {geofences.map(g => g.name).join(', ')}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const CleanMap = ({ onLocationUpdate, showGeofencing = true }) => {
   const [userLocation, setUserLocation] = useState(null);
   const [selectedMarker, setSelectedMarker] = useState(null);
   const [locationError, setLocationError] = useState(null);
+  const [mapError, setMapError] = useState(null);
+  const [isMapLoading, setIsMapLoading] = useState(true);
+  const [usesFallback, setUsesFallback] = useState(false);
+  
+  // Use hardcoded geofences from config file
+  const geofences = GEOFENCES.filter(g => g.isActive);
+  
+  console.log('📍 Loaded hardcoded geofences:', geofences.length);
+
+  // Set fallback timeout for Google Maps loading
+  React.useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (isMapLoading && hasValidApiKey) {
+        console.warn('⏰ Google Maps loading timeout, switching to fallback');
+        setMapError('Google Maps loading timeout. Using fallback map.');
+        setUsesFallback(true);
+        setIsMapLoading(false);
+      }
+    }, 15000); // 15 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [isMapLoading, hasValidApiKey]);
 
   // Memoized styles and settings
   const containerStyle = useMemo(() => ({
@@ -116,11 +322,33 @@ const CleanMap = ({ onLocationUpdate }) => {
     );
   }, [center.lat, center.lng, onLocationUpdate]);
 
-  // Handle map load
+  // Handle map load success
   const onMapLoad = useCallback(() => {
-    console.log('Map loaded, getting location...');
+    console.log('✅ Google Maps loaded successfully!');
+    setIsMapLoading(false);
+    setMapError(null);
+    setUsesFallback(false);
     getCurrentLocation();
   }, [getCurrentLocation]);
+
+  // Handle map load error
+  const onMapError = useCallback((error) => {
+    console.error('❌ Google Maps failed to load:', error);
+    setMapError('Google Maps failed to load. Using fallback map.');
+    setIsMapLoading(false);
+    setUsesFallback(true);
+  }, []);
+
+  // Check if API key is available
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const hasValidApiKey = apiKey && apiKey !== 'your_google_maps_api_key_here' && apiKey.length > 10;
+  
+  console.log('🗝️ Google Maps API Key status:', {
+    hasKey: !!apiKey,
+    keyLength: apiKey?.length || 0,
+    isValid: hasValidApiKey,
+    keyPreview: apiKey ? `${apiKey.substring(0, 6)}...` : 'Missing'
+  });
 
   const onMarkerClick = useCallback((marker) => {
     setSelectedMarker(marker);
@@ -129,6 +357,50 @@ const CleanMap = ({ onLocationUpdate }) => {
   const onInfoWindowClose = useCallback(() => {
     setSelectedMarker(null);
   }, []);
+
+  // Circle options for hardcoded geofences
+  const getCircleOptions = useCallback((geofence) => ({
+    strokeColor: geofence.color || '#ff0000',
+    strokeOpacity: 0.8,
+    strokeWeight: 3,
+    fillColor: geofence.color || '#ff0000',
+    fillOpacity: 0.2,
+    clickable: true, // Allow clicking for info
+    draggable: false,
+    editable: false,
+    visible: true
+  }), []);
+
+  // If API key is invalid or Google Maps failed, use fallback
+  if (!hasValidApiKey || usesFallback) {
+    return (
+      <div style={{ position: 'relative', width: '100%' }}>
+        {!hasValidApiKey && (
+          <div style={{
+            padding: '1rem',
+            background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+            border: '2px solid #f59e0b',
+            borderRadius: '8px',
+            marginBottom: '1rem',
+            textAlign: 'center'
+          }}>
+            <h4 style={{ margin: '0 0 0.5rem 0', color: '#92400e' }}>
+              ⚠️ Google Maps API Configuration Required
+            </h4>
+            <p style={{ margin: '0', fontSize: '0.9rem', color: '#a16207' }}>
+              {!apiKey ? 'API key is missing from environment variables' : 'Invalid API key detected'}
+            </p>
+          </div>
+        )}
+        <FallbackMap 
+          userLocation={userLocation}
+          touristAttractions={touristAttractions}
+          onLocationUpdate={onLocationUpdate}
+          geofences={geofences}
+        />
+      </div>
+    );
+  }
 
   return (
     <div style={{ position: 'relative', width: '100%' }}>
@@ -163,6 +435,25 @@ const CleanMap = ({ onLocationUpdate }) => {
           📍 {userLocation ? 'Update Location' : 'Find My Location'}
         </button>
         
+        {showGeofencing && (
+          <div
+            style={{
+              padding: '8px 12px',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(239, 68, 68, 0.9)',
+              color: 'white',
+              fontWeight: '600',
+              fontSize: '12px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            🚧 {geofences.length} Red Zones Active
+          </div>
+        )}
+        
         {locationError && (
           <div style={{
             padding: '8px 12px',
@@ -178,7 +469,15 @@ const CleanMap = ({ onLocationUpdate }) => {
         )}
       </div>
       <LoadScript 
-        googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
+        googleMapsApiKey={apiKey}
+        onLoad={() => {
+          console.log('✅ LoadScript: Google Maps JavaScript API loaded');
+          setMapError(null);
+        }}
+        onError={(error) => {
+          console.error('❌ LoadScript: Failed to load Google Maps JavaScript API:', error);
+          onMapError(error);
+        }}
         loadingElement={
           <div style={{
             height: '600px',
@@ -270,6 +569,19 @@ const CleanMap = ({ onLocationUpdate }) => {
             />
           ))}
 
+          {/* Geofence circles */}
+          {geofences.map((geofence) => (
+            <Circle
+              key={geofence.id}
+              center={{
+                lat: geofence.latitude,
+                lng: geofence.longitude
+              }}
+              radius={geofence.radius}
+              options={getCircleOptions(geofence)}
+            />
+          ))}
+
           {/* Info window for selected marker */}
           {selectedMarker && (
             <InfoWindow
@@ -302,6 +614,45 @@ const CleanMap = ({ onLocationUpdate }) => {
           )}
         </GoogleMap>
       </LoadScript>
+
+      {/* Geofence Info */}
+      {showGeofencing && geofences.length > 0 && (
+        <div style={{
+          marginTop: '20px',
+          padding: '15px',
+          backgroundColor: '#fef2f2',
+          border: '2px solid #fecaca',
+          borderRadius: '8px'
+        }}>
+          <h4 style={{ margin: '0 0 10px 0', color: '#dc2626', fontSize: '16px' }}>
+            🚧 Active Red Zones ({geofences.length})
+          </h4>
+          <div style={{ display: 'grid', gap: '8px' }}>
+            {geofences.map((geofence) => (
+              <div key={geofence.id} style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '8px',
+                backgroundColor: 'white',
+                borderRadius: '6px',
+                fontSize: '13px'
+              }}>
+                <span style={{ fontWeight: '600', color: '#374151' }}>{geofence.name}</span>
+                <span style={{ color: '#6b7280' }}>{geofence.radius}m radius</span>
+              </div>
+            ))}
+          </div>
+          <p style={{ 
+            margin: '10px 0 0 0', 
+            fontSize: '12px', 
+            color: '#6b7280',
+            fontStyle: 'italic'
+          }}>
+            📝 To modify zones, edit the geofences.js config file
+          </p>
+        </div>
+      )}
 
       {/* CSS Animations */}
       <style>{`
